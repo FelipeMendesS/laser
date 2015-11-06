@@ -3,7 +3,9 @@ import os
 import zipfile
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
-os.chdir('C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos')
+path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
+path2 = 'C:\\Users\\Usuário\\Desktop'
+os.chdir(path)
 
 # lê o nome e a extebsão do arquivo
 name = raw_input("Digite o nome do arquivo que deseja enviar: ")
@@ -34,3 +36,7 @@ recebido = str(recebido_byte)
 with open(name + "_saida.zip",'wb') as g:
     g.write(recebido)
 
+zfile = zipfile.ZipFile(name + "_saida.zip")
+zfile.extract(arq, path2)
+zfile.close()
+os.remove(name + "_saida.zip")
