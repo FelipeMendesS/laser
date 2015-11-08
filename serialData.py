@@ -14,12 +14,18 @@ def is_float(s):
         return 0
 
 
+def wait_for_data(serial_port, )
+
 def read_data(serial_port, data_queue, end_measurement_event):
+    is_pointed = False
     serial_port.flushInput()
     while serial_port.inWaiting() < 200:
         serial_port.readline()
         time.sleep(0.1)
         print serial_port.inWaiting()
+    # Pointing
+    while not is_pointed:
+
     while not end_measurement_event.is_set():
         if serial_port.inWaiting() < 200:
             time.sleep(0.1)

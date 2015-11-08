@@ -18,7 +18,7 @@ zf.write(arq)
 zf.close()
 
 # lê o arquivo zipado como binário
-with open(name + ".zip",'rb') as f:
+with open(name + ".zip", 'rb') as f:
     data = f.read()
 os.remove(name + ".zip")
 
@@ -28,12 +28,12 @@ N = len(data_byte)
 
 # simulando a recepção
 recebido_byte = bytearray(N)
-for i in range(0,N):
+for i in range(0, N):
     recebido_byte[i] = data_byte[i]
 
 recebido = str(recebido_byte)
 
-with open(name + "_saida.zip",'wb') as g:
+with open(name + "_saida.zip", 'wb') as g:
     g.write(recebido)
 
 zfile = zipfile.ZipFile(name + "_saida.zip")
