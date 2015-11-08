@@ -77,6 +77,10 @@ class SerialData(object):
     def message_queue_is_empty(self):
         return self.message_queue.empty()
 
+    def message_get(self):
+        if !self.message_queue.empty():
+            return self.message_queue.get()
+        return 0
 
     ser = ser.Serial('/dev/cu.usbmodem1411', 9600, timeout=2)
 
