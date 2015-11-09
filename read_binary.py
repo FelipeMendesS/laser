@@ -22,10 +22,17 @@ def send_file():
         zf.write(arq)
         zf.close()
 
+<<<<<<< HEAD
         # lê o arquivo zipado como binário
         with open(name + ".zip",'rb') as f:
             data = f.read()
         os.remove(name + ".zip")
+=======
+# lê o arquivo zipado como binário
+with open(name + ".zip", 'rb') as f:
+    data = f.read()
+os.remove(name + ".zip")
+>>>>>>> origin/master
 
         # prepara e envia o aqrquivo
         data_byte = bytearray(data)
@@ -41,12 +48,12 @@ def send_file():
 ----------------------------------------------------------------
 # simulando a recepção
 recebido_byte = bytearray(N)
-for i in range(0,N):
+for i in range(0, N):
     recebido_byte[i] = data_byte[i]
 
 recebido = str(recebido_byte)
 
-with open(name + "_saida.zip",'wb') as g:
+with open(name + "_saida.zip", 'wb') as g:
     g.write(recebido)
 
 zfile = zipfile.ZipFile(name + "_saida.zip")
