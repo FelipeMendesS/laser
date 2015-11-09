@@ -1,79 +1,31 @@
 import serial
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # import numpy as np
 import threading
 import time
 import Queue
 import struct
 
-class SerialData(object):
 
-    def __init__(self):
+class SerialInterface(object):
+
+    def __init__(self, port, baud_rate):
         self.input_queue = Queue.Queue()
         self.output_queue = Queue.Queue()
         self.message_queue = Queue.Queue()
+        self.baud_rate = baud_rate
+        self.serial_port = serial.Serial(port, baud_rate, timeout=0, writeTimeout=0)
+        self.stop_everything = threading.Event()
 
-    def is_float(s):
-        try:
-            number = float(s)
-            return number
-        except:
-            return 0
+        self.reading = threading.Thread(target=self.read_data, args=self)
+        self.writing = threading.Thread(target=self.write_data, args=self)
+        self.joining = threading.Thread(target=self.join_packet, args=self)
 
+        self.reading.start()
+        self.writing.start()
+        self.joining.start()
 
-    def wait_for_data(serial_port, minimum_buffer_size, sleep_time):
-        while serial_port.inWaiting() < minimum_buffer_size:
-            time.sleep(sleep_time)
-        return
-
-    def read_data(serial_port, input_queue, end_measurement_event):
-        is_pointed = False
-        serial_port.flushInput()
-        while serial_port.inWaiting() < 200:
-            serial_port.readline()
-            time.sleep(0.1)
-            print serial_port.inWaiting()
-        # Pointing
-        while not is_pointed:
-            wait_for_data(serial_port, 200, 0.001)
-            input_queue.put(serial_port.read(serial_port.inWaiting()),False)
-
-        # Now pointed
-
-
-
-        # while not end_measurement_event.is_set():
-        #     if serial_port.inWaiting() < 200:
-        #         time.sleep(0.1)
-        #         print serial_port.inWaiting()
-        #         continue
-        #     input_queue.put(serial_port.read(serial_port.inWaiting()), False)
-        # return
-
-
-    def write_data(data_matrix, data_queue, end_measurement_event):
-        # data_string = ""
-        # for j in range(10):
-        #     data_matrix.append([])
-        # for i in range(5):
-        #     while data_queue.qsize() < 3 and len(data_string) < 400:
-        #         time.sleep(0.1)
-        #     while not data_queue.empty():
-        #         data_string += data_queue.get(False)
-        #     data_string = data_string.split("mamai\r\n")[-1]
-        #
-        # for i in range(1000):
-        #     while data_queue.qsize() < 3 and len(data_string) < 400:
-        #         time.sleep(0.1)
-        #     while not data_queue.empty():
-        #         data_string += data_queue.get(False)
-        #     list_of_data = data_string.split("\r\n", 11)
-        #     for j, data in enumerate(list_of_data):
-        #         if j >= 0 and j < 10:
-        #             data_matrix[j].append(is_float(data))
-        #         if j == 11:
-        #             data_string = data
-        # end_measurement_event.set()
+        # self.is_link_up = threading.Event()
 
     def message_queue_is_empty(self):
         return self.message_queue.empty()
@@ -114,20 +66,52 @@ class SerialData(object):
 
     ser = ser.Serial('/dev/cu.usbmodem1411', 9600, timeout=2)
 
-    end_measurement = threading.Event()
-    is_link_up = threading.Event()
+    def wait_for_data(self, minimum_buffer_size, sleep_time):
+        while self.serial_port.inWaiting() < minimum_buffer_size:
+            time.sleep(sleep_time)
+        return
 
-    input_queue = Queue.Queue()
-    output_queue = Queue.Queue()
-    message_queue = Queue.Queue()
+    def read_data(self):
+        self.serial_port.flushInput()
+        while self.serial_port.inWaiting() < 200:
+            self.serial_port.readline()
+            time.sleep(0.1)
+            print self.serial_port.inWaiting()
+        # read data from serial port continuously
+        while not self.stop_everything.is_set():
+            self.wait_for_data(200, 0.01)
+            self.input_queue.put(self.serial_port.read(self.serial_port.inWaiting()), False)
+        self.writing.join()
+        self.serial_port.close()
 
-    data_matrix = []
 
-    reading = threading.Thread(target=read_data, args=(ser, input_queue,
-                               end_measurement))
+    def write_data(self):
+        data_to_send = b""
+        self.serial_port.flushOutput()
+        while not self.stop_everything.is_set():
+            if self.output_queue.empty() or self.serial_port.outWaiting() > 100:
+                time.sleep(0.001)
+            else:
+                data_to_send = self.output_queue.get(block=False)
+                self.serial_port.write(byte_array)
 
-    # writing = threading.Thread(target=store_data, args=(data_matrix,
-    #                            data_queue, end_measurement))
+    def join_packet(self):
+        parts_list = []
+        while not self.stop_everything.is_set():
+            if self.input_queue.empty():
+                time.sleep(0.01)
+            else:
+                parts_list.append(self.input_queue.get())
+                length = 0
+                for item in parts_list:
+                    length += len(item)
+                if length >= 10000:
+                    all_data = b"".join(parts_list)
+                    self.message_queue.put(all_data[:10000], block=False)
+                    parts_list = [all_data[10000:]]
+
+    def stop_serial(self):
+        self.stop_everything.set()
 
     reading.start()
     writing.start()

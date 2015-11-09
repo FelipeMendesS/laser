@@ -7,9 +7,10 @@ import Queue
 import struct
 
 class PackedJoiner(object):
-	"""docstring for PackedJoiner"""
-	def __init__(self, arg):
+
+	def __init__(self):
 		self.input_queue = Queue.Queue()
         self.output_queue = Queue.Queue()
         self.message_queue = Queue.Queue()
 		
+	
