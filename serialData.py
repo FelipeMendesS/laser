@@ -59,7 +59,6 @@ class SerialInterface(object):
     def write_data(self):
         data_to_send = b""
         self.serial_port.flushOutput()
-        for i in 
         while not self.stop_everything.is_set():
             if self.output_queue.empty() or self.serial_port.outWaiting() > 100:
                 time.sleep(0.001)
