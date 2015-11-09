@@ -3,6 +3,7 @@ import os
 import zipfile
 import threading
 from struct import *
+from serialData import SerialInterface
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
@@ -22,30 +23,24 @@ def send_file():
         zf.write(arq)
         zf.close()
 
-<<<<<<< HEAD
         # lê o arquivo zipado como binário
         with open(name + ".zip",'rb') as f:
             data = f.read()
         os.remove(name + ".zip")
-=======
-# lê o arquivo zipado como binário
-with open(name + ".zip", 'rb') as f:
-    data = f.read()
-os.remove(name + ".zip")
->>>>>>> origin/master
 
         # prepara e envia o aqrquivo
         data_byte = bytearray(data)
         N_byte = bytearray(pack('i', len(data_byte)))
 
         msg = bytearray([1]) + N_byte + bytearray(arq)
-        send_data
+        # SerialInterface.send_data(msg)
 
         ans = raw_input("Gostaria de enviar outro arquivo? (s/n): ")
 
 
 
-----------------------------------------------------------------
+
+ # Provavelmente o ideal e criar a interface dentro desse programa.
 # simulando a recepção
 recebido_byte = bytearray(N)
 for i in range(0, N):
