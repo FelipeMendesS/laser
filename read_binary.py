@@ -1,31 +1,44 @@
 # -*- coding: cp1252 -*-
 import os
 import zipfile
+import threading
+from struct import *
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
 path2 = 'C:\\Users\\Usuário\\Desktop'
 os.chdir(path)
 
-# lê o nome e a extebsão do arquivo
-name = raw_input("Digite o nome do arquivo que deseja enviar: ")
-ext = raw_input("Digite a extensão do arquivo: ")
-arq = name + "." + ext
+def send_file():
+    ans = 's'
+    while ans == 's':
+        # lê o nome e a extebsão do arquivo
+        name = raw_input("Digite o nome do arquivo que deseja enviar: ")
+        ext = raw_input("Digite a extensão do arquivo: ")
+        arq = name + "." + ext
 
-# cria um zip e adiciona o arquivo
-zf = zipfile.ZipFile(name + ".zip", 'w')
-zf.write(arq)
-zf.close()
+        # cria um zip e adiciona o arquivo
+        zf = zipfile.ZipFile(name + ".zip", 'w')
+        zf.write(arq)
+        zf.close()
 
-# lê o arquivo zipado como binário
-with open(name + ".zip",'rb') as f:
-    data = f.read()
-os.remove(name + ".zip")
+        # lê o arquivo zipado como binário
+        with open(name + ".zip",'rb') as f:
+            data = f.read()
+        os.remove(name + ".zip")
 
-data_byte = bytearray(data)
-N = len(data_byte)
+        # prepara e envia o aqrquivo
+        data_byte = bytearray(data)
+        N_byte = bytearray(pack('i', len(data_byte)))
+
+        msg = bytearray([1]) + N_byte + bytearray(arq)
+        send_data
+
+        ans = raw_input("Gostaria de enviar outro arquivo? (s/n): ")
 
 
+
+----------------------------------------------------------------
 # simulando a recepção
 recebido_byte = bytearray(N)
 for i in range(0,N):
