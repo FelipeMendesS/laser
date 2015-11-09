@@ -12,5 +12,7 @@ class PackedJoiner(object):
 		self.input_queue = Queue.Queue()
         self.output_queue = Queue.Queue()
         self.message_queue = Queue.Queue()
+
+    def receive_data():
+    	
 		
-	

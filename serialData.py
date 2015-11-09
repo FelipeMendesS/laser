@@ -35,10 +35,15 @@ class SerialInterface(object):
             return self.message_queue.get()
         return 0
 
+    #   /package_length(2 bytes)/last_package(1 byte)/actual_package(1 byte)/package
+
     def send_data(self, file_to_send):
+
+        max_package_length = 12500;
+
         message_byte = file_to_send
         message_length = len(message_byte)
-        package_max = int((message_length - 1)/12500) + 1
+        package_max = int((message_length - 1)/max_package_length) + 1
         #package_begin = "01010101"
         #package_end = "10011001"
 
@@ -48,15 +53,15 @@ class SerialInterface(object):
             package += str(struct.pack('BB', package_max, j))
 
             if j != package_max:
-                package = str(struct.pack('BB', 12500/256, 12500 % 256)) + package
-                package += str(message_byte[(j-1)*12500:j*12500])
+                package = str(struct.pack('BB', max_package_length/256, max_package_length % 256)) + package
+                package += str(message_byte[(j-1)*max_package_length:j*max_package_length])
             else:
-                if message_length == 12500:
+                if message_length == max_package_length:
                     package = str(struct.pack('BB', message_length / 256, message_length % 256)) + package
-                    package += str(message_byte[(j-1)*12500:(j-1)*12500 + 12500 + 1])
+                    package += str(message_byte[(j-1)*max_package_length:(j-1)*max_package_length + max_package_length + 1])
                 else:
-                    package = str(struct.pack('BB', (message_length % 12500)/256, (message_length % 12500) % 256)) + package
-                    package += str(message_byte[(j-1)*12500:(j-1)*12500 + message_length % 12500 + 1])
+                    package = str(struct.pack('BB', (message_length % max_package_length)/256, (message_length % max_package_length) % 256)) + package
+                    package += str(message_byte[(j-1)*max_package_length:(j-1)*max_package_length + message_length % max_package_length + 1])
 
             #package_ack = ""
             #package += str(struct.pack('b', package_ack))
