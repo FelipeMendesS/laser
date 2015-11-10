@@ -37,56 +37,34 @@ class SerialInterface(object):
             return self.message_queue.get()
         return 0
 
-    def input_queue_is_empty(self):
-        return self.input_queue.empty()
-
-    def input_get(self):
-        if not self.input_queue.empty():
-            return self.input_queue.get()
-        return 0
-
-    def input_put(data):
-        self.input_queue.put(data):
-
-    def output_queue_is_empty(self):
-        return self.output_queue.empty()
-
-    def output_get(self):
-        if not self.output_put.empty():
-            return self.output_queue.get()
-        return 0
-
-    def output_put(data):
-        self.output_queue.put(data)
-
     #       --HEADER--
-    #       \package_length(2 bytes)\last_package(1 byte)\actual_package(1 byte)\
+    #       \packet_length(2 bytes)\last_packet(1 byte)\actual_packet(1 byte)\
     #       --/HEADER--
 
     def send_data(self, file_to_send):
-        if not file_to_send == '':
-            max_package_length = 12500
+        max_packet_length = 12500
+        if not file_to_send == '' and max_packet_length <= 0xffff:
             message_length = len(file_to_send)
-            last_package = int((message_length - 1)/max_package_length) + 1
-            #package_begin = "01010101"
-            #package_end = "10011001"
-            for actual_package in range(1, last_package + 1):
-                package = ""
-                #package = struct.pack('BB', package_begin, package_end)
-                package += struct.pack('BB', last_package, actual_package)
-                pointer_package_begin = (actual_package - 1) * max_package_length
+            last_packet = int((message_length - 1)/max_packet_length) + 1
+            #packet_begin = "01010101"
+            #packet_end = "10011001"
+            for actual_packet in range(1, last_packet + 1):
+                packet = ""
+                #packet = struct.pack('BB', packet_begin, packet_end)
+                packet += str(struct.pack('BB', last_packet, actual_packet))
+                pointer_packet_begin = (actual_packet - 1) * max_packet_length
 
-                if (actual_package != last_package) or (message_length % max_package_length == 0):
-                    pointer_package_end = pointer_package_begin + max_package_length
+                if (actual_packet != last_packet) or (message_length % max_packet_length == 0):
+                    pointer_packet_end = pointer_packet_begin + max_packet_length
                 else:
-                    pointer_package_end = pointer_package_begin + message_length % max_package_length
+                    pointer_packet_end = pointer_packet_begin + message_length % max_packet_length
 
-                package_length = pointer_package_end - pointer_package_begin
-                package = struct.pack('H', package_length)[::-1] + package
-                package += file_to_send[pointer_package_begin : pointer_package_end]
-                #package_ack = ""
-                #package += struct.pack('b', package_ack))
-                self.output_queue.put(package, False)
+                packet_length = pointer_packet_end - pointer_packet_begin
+                packet = str(struct.pack('H', packet_length)[::-1]) + packet
+                packet += str(file_to_send[pointer_packet_begin : pointer_packet_end])
+                #packet_ack = ""
+                #packet += struct.pack('b', packet_ack))
+                self.output_queue.put(packet, False)
 
     # Interface com o abraco termina
 
@@ -140,6 +118,22 @@ class SerialInterface(object):
     # Funcao que junta os bytes recebidos, que estao na input queue, e quando ela detecta um pacote
     # inteiro, manda pro interpret_packets.
     def concatenate_received_bytes(self, bytearray):
+        while not self.input_queue.empty():
+            header_length = 4
+            header = bytearray(header_length)
+            for j in range(header_length):
+                header[j] = struct.unpack('B', self.input_queue.get())[0]
+            #interpretar o header...
+            packet_length = header[0] * 256 + header[1]
+            last_packet = header[2]
+            actual_packet = header[3]
+
+            packet = bytearray(packet_length)
+
+            for j in range(packet_length):
+                packet[j] = self.input_queue.get()
+            #header é enviado com o packet?
+            interpret_packets(self, header + packet):
         return
 
     #Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
