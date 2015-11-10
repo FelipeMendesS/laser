@@ -59,36 +59,34 @@ class SerialInterface(object):
     def output_put(data):
         self.output_queue.put(data)
 
-    #   /package_length(2 bytes)/last_package(1 byte)/actual_package(1 byte)/package
+    #       --HEADER--
+    #       \package_length(2 bytes)\last_package(1 byte)\actual_package(1 byte)\
+    #       --/HEADER--
 
     def send_data(self, file_to_send):
-        max_package_length = 12500
-        message_byte = file_to_send
-        message_length = len(message_byte)
-        package_max = int((message_length - 1)/max_package_length) + 1
-        #package_begin = "01010101"
-        #package_end = "10011001"
+        if not file_to_send == '':
+            max_package_length = 12500
+            message_length = len(file_to_send)
+            last_package = int((message_length - 1)/max_package_length) + 1
+            #package_begin = "01010101"
+            #package_end = "10011001"
+            for actual_package in range(1, last_package + 1):
+                package = ""
+                #package = struct.pack('BB', package_begin, package_end)
+                package += struct.pack('BB', last_package, actual_package)
+                pointer_package_begin = (actual_package - 1) * max_package_length
 
-        for j in range(1, package_max + 1):
-            package = ""
-            #package = str(struct.pack('BB', package_begin, package_end))
-            package += str(struct.pack('BB', package_max, j))
-
-            if j != package_max:
-                package = str(struct.pack('BB', max_package_length/256, max_package_length % 256)) + package
-                package += str(message_byte[(j-1)*max_package_length:j*max_package_length])
-            else:
-                if message_length == max_package_length:
-                    package = str(struct.pack('BB', message_length / 256, message_length % 256)) + package
-                    package += str(message_byte[(j-1)*max_package_length:(j-1)*max_package_length + max_package_length + 1])
+                if (actual_package != last_package) or (message_length % max_package_length == 0):
+                    pointer_package_end = pointer_package_begin + max_package_length
                 else:
-                    package = str(struct.pack('BB', (message_length % max_package_length)/256, (message_length % max_package_length) % 256)) + package
-                    package += str(message_byte[(j-1)*max_package_length:(j-1)*max_package_length + message_length % max_package_length + 1])
+                    pointer_package_end = pointer_package_begin + message_length % max_package_length
 
-            #package_ack = ""
-            #package += str(struct.pack('b', package_ack))
-
-            self.output_queue.put(package, False)
+                package_length = pointer_package_end - pointer_package_begin
+                package = struct.pack('H', package_length)[::-1] + package
+                package += file_to_send[pointer_package_begin : pointer_package_end + 1]
+                #package_ack = ""
+                #package += struct.pack('b', package_ack))
+                self.output_queue.put(package, False)
 
     # Interface com o abraco termina
 
