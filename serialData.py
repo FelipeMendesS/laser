@@ -16,6 +16,7 @@ class SerialInterface(object):
         self.baud_rate = baud_rate
         self.serial_port = serial.Serial(port, baud_rate, timeout=0, writeTimeout=0)
         self.stop_everything = threading.Event()
+        self.packet_byte_array = bytearray()
 
         self.reading = threading.Thread(target=self.read_data, args=self)
         self.writing = threading.Thread(target=self.write_data, args=self)
@@ -27,10 +28,11 @@ class SerialInterface(object):
 
         # self.is_link_up = threading.Event()
 
+    # Interface com o Abraco começa
     def message_queue_is_empty(self):
         return self.message_queue.empty()
 
-    def message_get(self):
+    def get_message(self):
         if not self.message_queue.empty():
             return self.message_queue.get()
         return 0
@@ -60,9 +62,7 @@ class SerialInterface(object):
     #   /package_length(2 bytes)/last_package(1 byte)/actual_package(1 byte)/package
 
     def send_data(self, file_to_send):
-
-        max_package_length = 12500;
-
+        max_package_length = 12500
         message_byte = file_to_send
         message_length = len(message_byte)
         package_max = int((message_length - 1)/max_package_length) + 1
@@ -90,10 +90,9 @@ class SerialInterface(object):
 
             self.output_queue.put(package, False)
 
+    # Interface com o abraco termina
 
-    ser = ser.Serial('/dev/cu.usbmodem1411', 9600, timeout=2)
-
-    def wait_for_data(self, minimum_buffer_size, sleep_time):
+    def wait_for_data(self, minimum_buffer_size, sleep_time):sme
         while self.serial_port.inWaiting() < minimum_buffer_size:
             time.sleep(sleep_time)
         return
@@ -140,5 +139,32 @@ class SerialInterface(object):
     def stop_serial(self):
         self.stop_everything.set()
 
-    reading.start()
-    writing.start()
+    # Funcao que junta os bytes recebidos, que estao na input queue, e quando ela detecta um pacote
+    # inteiro, manda pro interpret_packets.
+    def concatenate_received_bytes(self, bytearray):
+        return
+
+    #Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
+    # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
+    # a fila de mensagens.
+    def interpret_packets(self, bytearray):
+        return
+
+    # Manda uma mensagem (formato a definir) pra pedir um pacote que seja retransmitido pelo outro lado da conexao.
+    # Eh importante que definamos alguma forma de identificar as mensagens unicamente, por exemplo com uma ID no header,
+    # assim podemos identificar para o transmissor o ID da mensagem e pacote que deve ser retransmitido.
+    # Alem disso, parece razoavel avisar o transmissor pelo menos que o primeiro e o ultimo pacote foram recebiudos com sucesso.
+    def request_retransmission(self):
+        return
+
+    # Chamado pelo interpret_packets quando ele detecta que foi pedida uma retransmissao. Para isso ocorrer precisamos manter
+    # jum buffer dos pacotes enviados ate o momento que eles recebem acknowledgement de que foram recebidos completamente.
+    def resend_packet(self):
+        return
+
+    # :P
+
+
+
+
+
