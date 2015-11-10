@@ -89,16 +89,24 @@ class SerialInterface(object):
         self.writing.join()
         self.serial_port.close()
 
-    # The basic idea
+    # The basic idea is to send an amount of data that is less than the maximum the port can transmit per second
+    # I currently don't know how to reliably check how many bytes I have in the output buffer of the computer
+    # at any given time, so I will use a simple calculation to decide how many bytes I send for each millisecond so
+    # I never completely fill the output buffer. It's obviously not 100% efficient.
     def write_data(self):
-        data_to_send = b""
+        byte_rate = self.baud_rate/10000
+        number_of_bytes_sent = byte_rate
+        data_to_send = bytearray()
         self.serial_port.flushOutput()
         while not self.stop_everything.is_set():
-            if self.output_queue.empty() or self.serial_port.outWaiting() > 100:
-                time.sleep(0.001)
-            else:
-                data_to_send = self.output_queue.get(block=False)
-                self.serial_port.write(data_to_send)
+            time.sleep(0.001)
+            if not self.output_queue.empty():
+                data_to_send.extend(self.output_queue.get(block=False))
+            if len(data_to_send) < byte_rate:
+                number_of_bytes_sent = len(data_to_send)
+            self.serial_port.write(data_to_send[:number_of_bytes_sent])
+            data_to_send = data_to_send[number_of_bytes_sent:]
+            number_of_bytes_sent = byte_rate
 
     def join_packet(self):
         parts_list = []
@@ -121,6 +129,7 @@ class SerialInterface(object):
     # Funcao que junta os bytes recebidos, que estao na input queue, e quando ela detecta um pacote
     # inteiro, manda pro interpret_packets.
     def concatenate_received_bytes(self, bytearray):
+
         while not self.input_queue.empty():
             header_length = 4
             header = bytearray(header_length)
