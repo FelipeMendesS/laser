@@ -35,6 +35,28 @@ class SerialInterface(object):
             return self.message_queue.get()
         return 0
 
+    def input_queue_is_empty(self):
+        return self.input_queue.empty()
+
+    def input_get(self):
+        if not self.input_queue.empty():
+            return self.input_queue.get()
+        return 0
+
+    def input_put(data):
+        self.input_queue.put(data):
+
+    def output_queue_is_empty(self):
+        return self.output_queue.empty()
+
+    def output_get(self):
+        if not self.output_put.empty():
+            return self.output_queue.get()
+        return 0
+
+    def output_put(data):
+        self.output_queue.put(data)
+
     #   /package_length(2 bytes)/last_package(1 byte)/actual_package(1 byte)/package
 
     def send_data(self, file_to_send):
