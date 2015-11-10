@@ -6,6 +6,11 @@ import serialData
 import time
 from struct import *
 
+# colocar aqui o diretório do arquivo usando barra dupla (\\)
+path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
+path2 = 'C:\\Users\\Usuário\\Desktop'
+os.chdir(path)
+
 # constantes do protocolo
 send_request = bytearray([1])
 send_ok = bytearray([2])
@@ -61,6 +66,8 @@ def receive_file():
         msg = serialData.get_message()
 
         if msg[0] == send_request:
+            receive_ans = raw_input("Deseja receber um arquivo? (s/n): ")
+            
             serialData.send_data(send_ok)
             N_tuple = unpack('i',str(msg[1:5]))
             N = N_tuple[0]
@@ -82,10 +89,6 @@ def receive_file():
         else:
             msg_arrived_flag.set()
 
-# colocar aqui o diretório do arquivo usando barra dupla (\\)
-path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
-path2 = 'C:\\Users\\Usuário\\Desktop'
-os.chdir(path)
 
 sending = threading.Thread(target=send_file)
 receiving = threading.Thread(target=receive_file)
