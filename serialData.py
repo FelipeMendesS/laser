@@ -62,9 +62,12 @@ class SerialInterface(object):
                 packet_length = pointer_packet_end - pointer_packet_begin
                 packet = str(struct.pack('H', packet_length)[::-1]) + packet
                 packet += str(file_to_send[pointer_packet_begin : pointer_packet_end])
+
                 #packet_ack = ""
                 #packet += struct.pack('b', packet_ack))
-                self.output_queue.put(packet, False)
+
+                for x in xrange(0,len(packet)):
+                    self.output_queue.put(packet[x], False)
 
     # Interface com o abraco termina
 
