@@ -20,11 +20,15 @@ receiving.start()
 # constantes do protocolo
 send_request = bytearray([1])
 send_ok = bytearray([2])
+msg_start_byte = bytearray([3])
+
+# variaveis globais
+msg = bytearray([])
+msg_flag = False
+ans = 's'
 
 def send_file():
-    ans = 's'
-    msg_flag = False
-    while ans == 's':
+    while (ans == 's') or (ans == 'S'):
         # lê o nome e a extebsão do arquivo
         name = raw_input("Digite o nome do arquivo que deseja enviar: ")
         ext = raw_input("Digite a extensão do arquivo: ")
@@ -46,23 +50,46 @@ def send_file():
         N_byte = bytearray(pack('i', len(data_byte)))
 
         msg = send_request + N_byte + bytearray(arq)
-        send_data(msg)
+        serialData.send_data(msg)
         t0 = time.clock()
-        while (time.clock()-to < 30):
-            if not message_queue_is_empty():
-                msg_flag = True
+        while (time.clock()-t0 < 30):
+            if msg_flag:
                 break
 
         if msg_flag:
-            msg = message_get()
             if msg == send_ok:
-                send_data(data_byte)
+                serialData.send_data(msg_start_byte + data_byte)
                 msg_flag = False
         
+        ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
 
-        ans = raw_input("Gostaria de enviar outro arquivo? (s/n): ")
+def receive_file():
+    while (ans == 's') or (ans == 'S'):
+        while serialData.message_queue_is_empty():
+            pass
 
+        msg = serialData.get_message()
 
+        if msg[0] == send_request:
+            serialData.send_data(send_ok)
+            N_tuple = unpack('i',str(msg[1:5]))
+            N = N_tuple[0]
+            file_name = str(msg[5:])
+        else if msg[0] == msg_start_byte:
+            received = str(msg[1:])
+            for i in range(0,N):
+                if file_name[i] == '.':
+                    dot = i
+            r_name = file_name[0:dot]
+            r_ext = file_name[dot+1:]
+            with open(r_name + ".zip", 'wb') as g:
+                g.write(received)
+            zfile = zipFile.ZipFile(r_name + ".zip")
+            zfile.extract(file_name, path2)
+            zfile.close()
+            os.remove(r_name + ".zip")
+
+        msg_flag = True
 
 
 # simulando a recepção
