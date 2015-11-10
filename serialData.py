@@ -83,7 +83,7 @@ class SerialInterface(object):
 
                 package_length = pointer_package_end - pointer_package_begin
                 package = struct.pack('H', package_length)[::-1] + package
-                package += file_to_send[pointer_package_begin : pointer_package_end + 1]
+                package += file_to_send[pointer_package_begin : pointer_package_end]
                 #package_ack = ""
                 #package += struct.pack('b', package_ack))
                 self.output_queue.put(package, False)
