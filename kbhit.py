@@ -114,11 +114,12 @@ class KBHit:
             return dr != []
 
 
-    def calculation(self, initial_value):
-        while True:
+    def calculation(self, initial_value, stop_event):
+        while not stop_event.is_set():
             initial_value += 1
-            print initial_value
-            time.sleep(1)
+            if initial_value % 100 == 0:
+                print initial_value
+            time.sleep(0.01)
 # Test
 if __name__ == "__main__":
 
@@ -126,7 +127,9 @@ if __name__ == "__main__":
 
     initial = 1
     kb = KBHit()
-    calc = threading.Thread(target=kb.calculation, args=(initial,))
+    stop = threading.Event()
+    calc = threading.Thread(target=kb.calculation, args=(initial, stop))
+
 
     print('Hit any key, or ESC to exit')
 
@@ -136,8 +139,8 @@ if __name__ == "__main__":
         if kb.kbhit():
             c = kb.getch()
             if ord(c) == 27: # ESC
+                stop.set()
                 break
-            # print(c)
-        time.sleep(0.01)
+            print c
 
     kb.set_normal_term()
