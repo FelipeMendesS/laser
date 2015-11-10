@@ -6,17 +6,6 @@ import serialData
 import time
 from struct import *
 
-# colocar aqui o diretório do arquivo usando barra dupla (\\)
-path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
-path2 = 'C:\\Users\\Usuário\\Desktop'
-os.chdir(path)
-
-sending = threading.Thread(target=send_file)
-receiving = threading.Thread(target=receive_file)
-
-sending.start()
-receiving.start()
-
 # constantes do protocolo
 send_request = bytearray([1])
 send_ok = bytearray([2])
@@ -24,7 +13,7 @@ msg_start_byte = bytearray([3])
 
 # variaveis globais
 msg = bytearray([])
-msg_flag = False
+msg_arrived_flag = threading.Event()
 ans = 's'
 
 def send_file():
@@ -53,19 +42,20 @@ def send_file():
         serialData.send_data(msg)
         t0 = time.clock()
         while (time.clock()-t0 < 30):
-            if msg_flag:
+            if msg_arrived_flag.is_set():
                 break
 
-        if msg_flag:
+        if msg_arrived_flag.is_set():
             if msg == send_ok:
                 serialData.send_data(msg_start_byte + data_byte)
-                msg_flag = False
+                msg_arrived_flag.clear()
         
         ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
 
 def receive_file():
     while (ans == 's') or (ans == 'S'):
         while serialData.message_queue_is_empty():
+            time.sleep(0.01)
             pass
 
         msg = serialData.get_message()
@@ -75,7 +65,8 @@ def receive_file():
             N_tuple = unpack('i',str(msg[1:5]))
             N = N_tuple[0]
             file_name = str(msg[5:])
-        else if msg[0] == msg_start_byte:
+            msg_arrived_flag.set()
+        elif msg[0] == msg_start_byte:
             received = str(msg[1:])
             for i in range(0,N):
                 if file_name[i] == '.':
@@ -84,12 +75,24 @@ def receive_file():
             r_ext = file_name[dot+1:]
             with open(r_name + ".zip", 'wb') as g:
                 g.write(received)
-            zfile = zipFile.ZipFile(r_name + ".zip")
+            zfile = zipfile.ZipFile(r_name + ".zip")
             zfile.extract(file_name, path2)
             zfile.close()
             os.remove(r_name + ".zip")
+        else:
+            msg_arrived_flag.set()
 
-        msg_flag = True
+# colocar aqui o diretório do arquivo usando barra dupla (\\)
+path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
+path2 = 'C:\\Users\\Usuário\\Desktop'
+os.chdir(path)
+
+sending = threading.Thread(target=send_file)
+receiving = threading.Thread(target=receive_file)
+
+sending.start()
+receiving.start()
+
 
 
 # simulando a recepção

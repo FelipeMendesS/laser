@@ -71,7 +71,7 @@ class SerialInterface(object):
 
     # Interface com o abraco termina
 
-    def wait_for_data(self, minimum_buffer_size, sleep_time):sme
+    def wait_for_data(self, minimum_buffer_size, sleep_time):
         while self.serial_port.inWaiting() < minimum_buffer_size:
             time.sleep(sleep_time)
         return
@@ -98,7 +98,7 @@ class SerialInterface(object):
                 time.sleep(0.001)
             else:
                 data_to_send = self.output_queue.get(block=False)
-                self.serial_port.write(byte_array)
+                self.serial_port.write(data_to_send)
 
     def join_packet(self):
         parts_list = []
@@ -136,7 +136,7 @@ class SerialInterface(object):
             for j in range(packet_length):
                 packet[j] = self.input_queue.get()
             #header é enviado com o packet?
-            interpret_packets(self, header + packet):
+            self.interpret_packets(header + packet)
         return
 
     #Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
