@@ -28,7 +28,7 @@ class SerialInterface(object):
 
         # self.is_link_up = threading.Event()
 
-    # Interface com o Abraco começa
+    # Interface com o Abraco comeca
     def message_queue_is_empty(self):
         return self.message_queue.empty()
 
@@ -46,11 +46,11 @@ class SerialInterface(object):
         if not file_to_send == '' and max_packet_length <= 0xffff:
             message_length = len(file_to_send)
             last_packet = int((message_length - 1)/max_packet_length) + 1
-            #packet_begin = "01010101"
-            #packet_end = "10011001"
+            # packet_begin = "01010101"
+            # packet_end = "10011001"
             for actual_packet in range(1, last_packet + 1):
                 packet = ""
-                #packet = struct.pack('BB', packet_begin, packet_end)
+                # packet = struct.pack('BB', packet_begin, packet_end)
                 packet += str(struct.pack('BB', last_packet, actual_packet))
                 pointer_packet_begin = (actual_packet - 1) * max_packet_length
 
@@ -63,8 +63,8 @@ class SerialInterface(object):
                 packet = str(struct.pack('H', packet_length)[::-1]) + packet
                 packet += str(file_to_send[pointer_packet_begin : pointer_packet_end])
 
-                #packet_ack = ""
-                #packet += struct.pack('b', packet_ack))
+                # packet_ack = ""
+                # packet += struct.pack('b', packet_ack))
 
                 for x in xrange(0,len(packet)):
                     self.output_queue.put(packet[x], False)
@@ -89,7 +89,7 @@ class SerialInterface(object):
         self.writing.join()
         self.serial_port.close()
 
-
+    # The basic idea
     def write_data(self):
         data_to_send = b""
         self.serial_port.flushOutput()
@@ -126,7 +126,7 @@ class SerialInterface(object):
             header = bytearray(header_length)
             for j in range(header_length):
                 header[j] = struct.unpack('B', self.input_queue.get())[0]
-            #interpretar o header...
+            # interpretar o header...
             packet_length = header[0] * 256 + header[1]
             last_packet = header[2]
             actual_packet = header[3]
@@ -135,7 +135,7 @@ class SerialInterface(object):
 
             for j in range(packet_length):
                 packet[j] = self.input_queue.get()
-            #header é enviado com o packet?
+            # header e enviado com o packet?
             self.interpret_packets(header + packet)
         return
 
