@@ -1,16 +1,24 @@
 import serial
-# import matplotlib.pyplot as plt
-# import numpy as np
 import threading
 import time
 import Queue
 import struct
+import bitarray
 
+# It seems to be reasonable for us to create differents initial bytes for the packets depending if we are requesting a
+# retransmission or acknowledging the data being received or asking for a retransmission. Just as an example I'll start
+# with some specific bit sequences:
+# Data Packet: 01010101
+# Acknowledging: 00101010
+# Retransmit request: 10101010
+# Also, we are going to send acknowledgment packets for the first packet and the last packet only, so we know when the
+# the message started to be received and when it was received completely. Probably logic in the interpret packets.
 
 class SerialInterface(object):
 
     def __init__(self, port, baud_rate):
         self.input_queue = Queue.Queue()
+        # Change output queue to priority queue so the packets can be retransmitted as fast as possible.
         self.output_queue = Queue.Queue()
         self.message_queue = Queue.Queue()
         self.baud_rate = baud_rate
@@ -38,7 +46,7 @@ class SerialInterface(object):
         return 0
 
     #       --HEADER--
-    #       \packet_length(2 bytes)\last_packet(1 byte)\actual_packet(1 byte)\
+    #       \packet_length(2 bytes)\last_packet(1 byte)\current_packet(1 byte)\
     #       --/HEADER--
 
     def send_data(self, file_to_send):
@@ -46,27 +54,29 @@ class SerialInterface(object):
         if not file_to_send == '' and max_packet_length <= 0xffff:
             message_length = len(file_to_send)
             last_packet = int((message_length - 1)/max_packet_length) + 1
+
             # packet_begin = "01010101"
             # packet_end = "10011001"
-            for actual_packet in range(1, last_packet + 1):
+
+            for current_packet in range(1, last_packet + 1):
                 packet = ""
                 # packet = struct.pack('BB', packet_begin, packet_end)
-                packet += str(struct.pack('BB', last_packet, actual_packet))
-                pointer_packet_begin = (actual_packet - 1) * max_packet_length
+                packet += str(struct.pack('BB', last_packet, current_packet))
+                pointer_packet_begin = (current_packet - 1) * max_packet_length
 
-                if (actual_packet != last_packet) or (message_length % max_packet_length == 0):
+                if (current_packet != last_packet) or (message_length % max_packet_length == 0):
                     pointer_packet_end = pointer_packet_begin + max_packet_length
                 else:
                     pointer_packet_end = pointer_packet_begin + message_length % max_packet_length
 
                 packet_length = pointer_packet_end - pointer_packet_begin
                 packet = str(struct.pack('H', packet_length)[::-1]) + packet
-                packet += str(file_to_send[pointer_packet_begin : pointer_packet_end])
+                packet += str(file_to_send[pointer_packet_begin:pointer_packet_end])
 
                 # packet_ack = ""
                 # packet += struct.pack('b', packet_ack))
 
-                for x in xrange(0,len(packet)):
+                for x in xrange(0, len(packet)):
                     self.output_queue.put(packet[x], False)
 
     # Interface com o abraco termina
@@ -100,7 +110,7 @@ class SerialInterface(object):
         self.serial_port.flushOutput()
         while not self.stop_everything.is_set():
             time.sleep(0.001)
-            if not self.output_queue.empty():
+            if not self.output_queue.empty() and len(data_to_send) < 1000:
                 data_to_send.extend(self.output_queue.get(block=False))
             if len(data_to_send) < byte_rate:
                 number_of_bytes_sent = len(data_to_send)
@@ -129,24 +139,25 @@ class SerialInterface(object):
     # Funcao que junta os bytes recebidos, que estao na input queue, e quando ela detecta um pacote
     # inteiro, manda pro interpret_packets.
     def concatenate_received_bytes(self, bytearray):
+        header_length = 4
+        header = bytearray(header_length)
+        while not self.stop_everything.is_set():
+            while not self.input_queue.empty():
+                header_length = 4
+                header = bytearray(header_length)
+                for j in range(header_length):
+                    header[j] = struct.unpack('B', self.input_queue.get())[0]
+                # interpretar o header...
+                packet_length = header[0] * 256 + header[1]
+                last_packet = header[2]
+                actual_packet = header[3]
 
-        while not self.input_queue.empty():
-            header_length = 4
-            header = bytearray(header_length)
-            for j in range(header_length):
-                header[j] = struct.unpack('B', self.input_queue.get())[0]
-            # interpretar o header...
-            packet_length = header[0] * 256 + header[1]
-            last_packet = header[2]
-            actual_packet = header[3]
+                packet = bytearray(packet_length)
 
-            packet = bytearray(packet_length)
-
-            for j in range(packet_length):
-                packet[j] = self.input_queue.get()
-            # header e enviado com o packet?
-            self.interpret_packets(header + packet)
-        return
+                for j in range(packet_length):
+                    packet[j] = self.input_queue.get()
+                # header e enviado com o packet?
+                self.interpret_packets(header + packet)
 
     #Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
@@ -158,14 +169,17 @@ class SerialInterface(object):
     # Eh importante que definamos alguma forma de identificar as mensagens unicamente, por exemplo com uma ID no header,
     # assim podemos identificar para o transmissor o ID da mensagem e pacote que deve ser retransmitido.
     # Alem disso, parece razoavel avisar o transmissor pelo menos que o primeiro e o ultimo pacote foram recebiudos com sucesso.
-    def request_retransmission(self):
-        return
+    def request_retransmission(self, packet_number, message_id):
+        request_byte = bytearray(bitarray.bitarray('10101010').tobytes())
+        packet = request_byte + bytearray(struct.pack('BB', packet_number, message_id))
+        self.output_queue.put(packet)
 
     # Chamado pelo interpret_packets quando ele detecta que foi pedida uma retransmissao. Para isso ocorrer precisamos manter
     # jum buffer dos pacotes enviados ate o momento que eles recebem acknowledgement de que foram recebidos completamente.
-    def resend_packet(self):
+    def resend_packet(self, packet_number):
         return
 
+    def send_acknowledgement(self, packet_nummber):
     # :P
 
 
