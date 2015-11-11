@@ -75,9 +75,7 @@ class SerialInterface(object):
 
                 # packet_ack = ""
                 # packet += struct.pack('b', packet_ack))
-
-                for x in xrange(0, len(packet)):
-                    self.output_queue.put(packet[x], False)
+                self.output_queue.put(packet, False)
 
     # Interface com o abraco termina
 
@@ -139,25 +137,18 @@ class SerialInterface(object):
     # Funcao que junta os bytes recebidos, que estao na input queue, e quando ela detecta um pacote
     # inteiro, manda pro interpret_packets.
     def concatenate_received_bytes(self, bytearray):
+        received_bytes = bytearray()
         header_length = 4
-        header = bytearray(header_length)
+        packet_length = 0
         while not self.stop_everything.is_set():
-            while not self.input_queue.empty():
-                header_length = 4
-                header = bytearray(header_length)
-                for j in range(header_length):
-                    header[j] = struct.unpack('B', self.input_queue.get())[0]
-                # interpretar o header...
-                packet_length = header[0] * 256 + header[1]
-                last_packet = header[2]
-                actual_packet = header[3]
-
-                packet = bytearray(packet_length)
-
-                for j in range(packet_length):
-                    packet[j] = self.input_queue.get()
-                # header e enviado com o packet?
-                self.interpret_packets(header + packet)
+            if not self.input_queue.empty():
+                received_bytes.append(self.input_queue.get(block=False))
+                if len(received_bytes) == header_length:
+                    packet_length = struct.unpack('H', received_bytes[1] + received_bytes[0])[0]
+                if len(received_bytes) == header_length + packet_length:
+                    self.interpret_packets(received_bytes)
+                    del received_bytes[:]
+        return
 
     #Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
@@ -179,8 +170,8 @@ class SerialInterface(object):
     def resend_packet(self, packet_number):
         return
 
-    def send_acknowledgement(self, packet_nummber):
-    # :P
+    def send_acknowledgement(self, packet_number):
+        return
 
 
 
