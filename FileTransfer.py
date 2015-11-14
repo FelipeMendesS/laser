@@ -57,6 +57,7 @@ def send_file():
         
         ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
 
+
 def receive_file():
     while (ans == 's') or (ans == 'S'):
         while serialData.message_queue_is_empty():
