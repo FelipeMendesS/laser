@@ -22,6 +22,8 @@ class SerialInterface(object):
     RETRANS_PACKET_B = 0xffaa5500
     MAX_PACKET_LENGTH = 12500
     HEADER_LENGTH = 8
+    FIRST_POINTING_BYTE = 0x55
+    LAST_POINTING_BYTE = 0xaa
 
     def __init__(self, port, baud_rate):
         try:
@@ -35,6 +37,8 @@ class SerialInterface(object):
             self.serial_port = serial.Serial(port, self.baud_rate, timeout=1, writeTimeout=1)
             #  Event to stop all threads and close serial port safely.
             self.stop_everything = threading.Event()
+            self.is_it_pointed = threading.Event()
+            self.received_first = threading.Event()
             self.packet_byte_array = bytearray()
             self.reading = threading.Thread(target=self.read_data)
             self.writing = threading.Thread(target=self.write_data)
@@ -59,7 +63,7 @@ class SerialInterface(object):
     def get_message(self):
         if not self.message_queue.empty():
             return self.message_queue.get()
-        return 0
+        return '0'
 
     #       --HEADER--
     #       \packet_begin(4 bytes)\packet_length(2 bytes)\last_packet(1 byte)\current_packet(1 byte)\
@@ -67,6 +71,7 @@ class SerialInterface(object):
 
     def send_data(self, file_to_send):
         if not file_to_send == '':
+            print file_to_send
             message_length = len(file_to_send)
             last_packet = int((message_length - 1)/self.MAX_PACKET_LENGTH) + 1
             for current_packet in range(1, last_packet + 1):
@@ -95,6 +100,32 @@ class SerialInterface(object):
         time.sleep(2)
         self.serial_port.flushInput()
         initial_data = bytearray()
+        index = -1
+        byte_to_check = self.FIRST_POINTING_BYTE
+        while not self.is_it_pointed.is_set():
+            pointing_data = bytearray()
+            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
+            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
+            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
+            self.wait_for_data(1,0.001)
+            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
+            for j, data in enumerate(pointing_data):
+                if data == byte_to_check and not self.received_first.is_set():
+                    self.received_first.set()
+                    byte_to_check = self.LAST_POINTING_BYTE
+                    index = j
+                    break
+                if data == byte_to_check and self.received_first.is_set():
+                    self.is_it_pointed.set()
+            if not self.received_first.is_set():
+                pointing_data = bytearray()
+            elif not self.is_it_pointed.is_set() and index != -1:
+                index = -1
+                pointing_data = pointing_data[index:]
+            elif not self.is_it_pointed.is_set():
+                pointing_data = bytearray()
+
+        self.input_queue.put(pointing_data)
         # packet_detected = False
         # while self.serial_port.inWaiting() < 1 and not self.stop_everything.is_set():
         #     try:
@@ -115,7 +146,6 @@ class SerialInterface(object):
         #     time.sleep(0.001)
         # self.input_queue.put(initial_data, False)
         # # read data from serial port continuously
-
         while not self.stop_everything.is_set():
             self.wait_for_data(1, 0.001)
             self.input_queue.put(self.serial_port.read(self.serial_port.inWaiting()), False)
@@ -135,6 +165,14 @@ class SerialInterface(object):
         number_of_bytes_sent = byte_rate
         data_to_send = bytearray()
         self.serial_port.flushOutput()
+
+        while not self.is_it_pointed.is_set():
+            if not self.received_first.is_set():
+                self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+                time.sleep(0.001)
+            else:
+                self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+                time.sleep(0.001)
         while not self.stop_everything.is_set():
             time.sleep(0.001)
             if not self.output_queue.empty() and len(data_to_send) < 1000:
