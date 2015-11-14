@@ -186,7 +186,7 @@ class SerialInterface(object):
                     index = self.find_beginning_of_packet(received_bytes)
                     if index != -1:
                         found_packet = True
-                        received_bytes =
+                        received_bytes = received_bytes[index:]
                 elif len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0:
                     packet_length = struct.unpack('H', received_bytes[1:3])[0]
                     current_packet, number_of_packets = struct.unpack('BB', received_bytes[3:5])
@@ -195,6 +195,7 @@ class SerialInterface(object):
                     self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
                     packet_length = 0
                     received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
+                    found_packet = False
             time.sleep(0.01)
 
     # Add option for different types of packets
