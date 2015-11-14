@@ -8,7 +8,7 @@ test_array = bytearray(os.urandom(100))
 serial_interface1 = serialData.SerialInterface("/dev/tty.usbmodem1421", 1000000)
 serial_interface2 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 
-data = bytearray(12500)
+data = bytearray(os.urandom(12500))
 
 serial_interface1.send_data(data)
 serial_interface2.send_data(data)

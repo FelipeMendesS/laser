@@ -19,7 +19,7 @@ class SerialInterface(object):
 
     DATA_PACKET_B = 0x0055aaff
     ACK_PACKET_B = 0x00aa55ff
-    RETRANS_PACKET_B = 0xffaa55ff
+    RETRANS_PACKET_B = 0xffaa5500
     MAX_PACKET_LENGTH = 12500
     HEADER_LENGTH = 8
 
@@ -47,6 +47,7 @@ class SerialInterface(object):
                 self.serial_port.close()
                 self.stop_serial()
             else:
+                self.stop_serial()
                 raise
 
         # self.is_link_up = threading.Event()
@@ -61,13 +62,13 @@ class SerialInterface(object):
         return 0
 
     #       --HEADER--
-    #       \packet_begin\packet_length(2 bytes)\last_packet(1 byte)\current_packet(1 byte)\
+    #       \packet_begin(4 bytes)\packet_length(2 bytes)\last_packet(1 byte)\current_packet(1 byte)\
     #       --/HEADER--
 
     def send_data(self, file_to_send):
         if not file_to_send == '':
             message_length = len(file_to_send)
-            last_packet = int((message_length - 1)/max_packet_length) + 1
+            last_packet = int((message_length - 1)/self.MAX_PACKET_LENGTH) + 1
             for current_packet in range(1, last_packet + 1):
                 pointer_packet_begin = (current_packet - 1) * self.MAX_PACKET_LENGTH
 
@@ -94,8 +95,8 @@ class SerialInterface(object):
         time.sleep(2)
         self.serial_port.flushInput()
         initial_data = bytearray()
-        packet_detected = False
-        while self.serial_port.inWaiting() < 1 and not packet_detected and not self.stop_everything.is_set():
+        # packet_detected = False
+        while self.serial_port.inWaiting() < 1 and not self.stop_everything.is_set():
             try:
                 initial_data += self.serial_port.readline()
                 # for i in range(len(initial_data) - 3):
@@ -188,29 +189,31 @@ class SerialInterface(object):
                         found_packet = True
                         received_bytes = received_bytes[index:]
                 elif len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0:
-                    packet_length = struct.unpack('H', received_bytes[1:3])[0]
-                    current_packet, number_of_packets = struct.unpack('BB', received_bytes[3:5])
-                current_length = len(received_bytes)
-                elif len(received_bytes) >= self.HEADER_LENGTH + packet_length:
+                    packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
+                    number_of_packets, current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+                elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length):
                     self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
                     packet_length = 0
                     received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
                     found_packet = False
+                current_length = len(received_bytes)
             time.sleep(0.01)
 
     # Add option for different types of packets
     def find_beginning_of_packet(self, byte_array):
         for i in range(len(byte_array) - 3):
-            if struct.unpack('I', byte_array[i:i+4])[0] == self.DATA_PACKET_B:
+            a = struct.unpack('I', byte_array[i:i+4])[0]
+            if a == self.DATA_PACKET_B:
                 return i
         return -1
 
     # Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
     # a fila de mensagens.
+    # TODO: CHange all index to constants
     def interpret_packets(self, byte_array):
-        self.message += byte_array[5:]
-        current_packet, number_of_packets = struct.unpack('BB', byte_array[3:5])
+        self.message += byte_array[self.HEADER_LENGTH:]
+        number_of_packets, current_packet = struct.unpack('BB', byte_array[3:5])
         if current_packet == number_of_packets:
             self.message_queue.put(self.message)
             self.message = bytearray()
