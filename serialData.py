@@ -96,25 +96,25 @@ class SerialInterface(object):
         self.serial_port.flushInput()
         initial_data = bytearray()
         # packet_detected = False
-        while self.serial_port.inWaiting() < 1 and not self.stop_everything.is_set():
-            try:
-                initial_data += self.serial_port.readline()
-                # for i in range(len(initial_data) - 3):
-                #     if struct.unpack('I', initial_data[i:i+4])[0] == self.DATA_PACKET_B:
-                #         initial_data = initial_data[i:]
-                #         packet_detected = True
-                #         break
-                # if not packet_detected and len(initial_data) >= 4:
-                #     initial_data = initial_data[len(initial_data)-3:]
-            except serial.SerialException:
-                if self.serial_port.isOpen():
-                    self.serial_port.close()
-                    self.stop_serial()
-                else:
-                    raise
-            time.sleep(0.001)
-        self.input_queue.put(initial_data, False)
-        # read data from serial port continuously
+        # while self.serial_port.inWaiting() < 1 and not self.stop_everything.is_set():
+        #     try:
+        #         initial_data += self.serial_port.readline()
+        #         # for i in range(len(initial_data) - 3):
+        #         #     if struct.unpack('I', initial_data[i:i+4])[0] == self.DATA_PACKET_B:
+        #         #         initial_data = initial_data[i:]
+        #         #         packet_detected = True
+        #         #         break
+        #         # if not packet_detected and len(initial_data) >= 4:
+        #         #     initial_data = initial_data[len(initial_data)-3:]
+        #     except serial.SerialException:
+        #         if self.serial_port.isOpen():
+        #             self.serial_port.close()
+        #             self.stop_serial()
+        #         else:
+        #             raise
+        #     time.sleep(0.001)
+        # self.input_queue.put(initial_data, False)
+        # # read data from serial port continuously
 
         while not self.stop_everything.is_set():
             self.wait_for_data(1, 0.001)
@@ -188,15 +188,15 @@ class SerialInterface(object):
                     if index != -1:
                         found_packet = True
                         received_bytes = received_bytes[index:]
-                elif len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0:
-                    packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                    number_of_packets, current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
-                elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length):
-                    self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
-                    packet_length = 0
-                    received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
-                    found_packet = False
-                current_length = len(received_bytes)
+            if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
+                packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
+                number_of_packets, current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+            elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length) and found_packet:
+                self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
+                packet_length = 0
+                received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
+                found_packet = False
+            current_length = len(received_bytes)
             time.sleep(0.01)
 
     # Add option for different types of packets
@@ -210,10 +210,9 @@ class SerialInterface(object):
     # Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
     # a fila de mensagens.
-    # TODO: CHange all index to constants
     def interpret_packets(self, byte_array):
         self.message += byte_array[self.HEADER_LENGTH:]
-        number_of_packets, current_packet = struct.unpack('BB', byte_array[3:5])
+        number_of_packets, current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
         if current_packet == number_of_packets:
             self.message_queue.put(self.message)
             self.message = bytearray()
