@@ -51,12 +51,24 @@ b = serial_interface1.get_message()
 # print b
 
 counter = 0
+for i, j in zip(b, data):
+    if i != j:
+        counter += 1
+print counter
+
+counter = 0
 for i, j in zip(a, b):
     if i != j:
         counter += 1
 print counter
 
-print bytearray(a) == data
+counter = 0
+for i, j in zip(a, data):
+    if i != j:
+        counter += 1
+print counter
+
+
 print bytearray(b) == data
 
 # try:

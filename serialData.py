@@ -3,7 +3,7 @@ import threading
 import time
 import Queue
 import struct
-import bitarray
+# import bitarray
 
 # It seems to be reasonable for us to create differents initial bytes for the packets depending if we are requesting a
 # retransmission or acknowledging the data being received or asking for a retransmission. Just as an example I'll start
@@ -223,7 +223,7 @@ class SerialInterface(object):
     # Alem disso, parece razoavel avisar o transmissor pelo menos que o primeiro e o ultimo pacote foram recebiudos com
     # sucesso.
     def request_retransmission(self, packet_number, message_id):
-        request_byte = bytearray(bitarray.bitarray('10101010').tobytes())
+        # request_byte = bytearray(bitarray.bitarray('10101010').tobytes())
         packet = request_byte + bytearray(struct.pack('BB', packet_number, message_id))
         self.output_queue.put(packet)
 
