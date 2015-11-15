@@ -5,7 +5,7 @@ import threading
 import serialData
 import time
 from struct import *
-import kbhit as kb
+import kbhit
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 # Mudar isso para ser mais generico (Apos teste funcionando)
@@ -27,19 +27,24 @@ msg_start_byte = bytearray([3])
 # variaveis globais
 msg = bytearray([])
 # Essa msg_arrived_flag eh true quando uma resposta chegou? O nome ta meio dificil de entender. Talvez mudar o nome?
+# Na verdade o nome de todos os eventos podiam ser mais claros. Um pouco mais descritivos. Deixaria o codigo mais
+# facil de ler.
 msg_arrived_flag = threading.Event()
 stop = threading.Event()
 interrupt = threading.Event()
 ans = 's'
 
+kb = kbhit.KBHit()
+
 
 def send_file():
-    while ((ans == 's') or (ans == 'S')):
+    global msg, ans
+    while ans == 's' or ans == 'S':
         # Talvez um sleep aqui?
         while not interrupt.is_set():
             # lê o nome e a extebsão do arquivo
-            #name = raw_input("Digite o nome do arquivo que deseja enviar: ")
-            #ext = raw_input("Digite a extensão do arquivo: ")
+            # name = raw_input("Digite o nome do arquivo que deseja enviar: ")
+            # ext = raw_input("Digite a extensão do arquivo: ")
 
             print "Digite o nome do arquivo que deseja enviar: "
             name = ''
@@ -80,10 +85,9 @@ def send_file():
             zf.close()
 
             # lê o arquivo zipado como binário
-            with open(name + ".zip",'rb') as f:
+            with open(name + ".zip", 'rb') as f:
                 data = f.read()
             os.remove(name + ".zip")
-
 
             # prepara e envia o aqrquivo
             data_byte = bytearray(data)
@@ -92,7 +96,7 @@ def send_file():
             msg = send_request + N_byte + bytearray(arq)
             serial_interface.send_data(msg)
             t0 = time.clock()
-            while (time.clock()-t0 < 30):
+            while time.clock()-t0 < 30:
                 if msg_arrived_flag.is_set():
                     break
 
@@ -108,6 +112,7 @@ def send_file():
 
 
 def receive_file():
+    global msg, ans
     while (ans == 's') or (ans == 'S'):
         while serial_interface.message_queue_is_empty():
             time.sleep(0.01)
@@ -119,7 +124,8 @@ def receive_file():
         # isso nunca vai dar True. (quando pegamos somente um elemento da bytearray ele retorna um inteiro
         if msg[0] == send_request[0]:
             interrupt.set()
-            # O usuario nao sabe o nome do arquivo ou o tamanho dele.
+            # O usuario nao sabe o nome do arquivo ou o tamanho dele. Alem disso, vc envia o ok, o usuario querendo o
+            # arquivo ou nao :P
             receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
             N_tuple = unpack('i', str(msg[1:5]))
             N = N_tuple[0]
@@ -155,21 +161,17 @@ receiving = threading.Thread(target=receive_file)
 sending.start()
 receiving.start()
 
-
-
 # simulando a recepção
-##recebido_byte = bytearray(N)
-##for i in range(0, N):
-##    recebido_byte[i] = data_byte[i]
-##
-##recebido = str(recebido_byte)
-##
-##with open(name + "_saida.zip", 'wb') as g:
-##    g.write(recebido)
-##
-##zfile = zipfile.ZipFile(name + "_saida.zip")
-##zfile.extract(arq, path2)
-##zfile.close()
-##os.remove(name + "_saida.zip")
-
-
+# recebido_byte = bytearray(N)
+# for i in range(0, N):
+#    recebido_byte[i] = data_byte[i]
+#
+# recebido = str(recebido_byte)
+#
+# with open(name + "_saida.zip", 'wb') as g:
+#    g.write(recebido)
+#
+# zfile = zipfile.ZipFile(name + "_saida.zip")
+# zfile.extract(arq, path2)
+# zfile.close()
+# os.remove(name + "_saida.zip"
