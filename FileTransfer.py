@@ -29,6 +29,7 @@ def send_file():
             # lê o nome e a extebsão do arquivo
             #name = raw_input("Digite o nome do arquivo que deseja enviar: ")
             #ext = raw_input("Digite a extensão do arquivo: ")
+
             print "Digite o nome do arquivo que deseja enviar: "
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
