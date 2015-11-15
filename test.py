@@ -24,10 +24,8 @@ serial_interface1.send_data(data)
 # serial_interface2.send_data(test_array)
 
 try:
-    print "oi"
     # while serial_interface1.message_queue_is_empty() or serial_interface2.message_queue_is_empty():
     while serial_interface1.message_queue_is_empty():
-        print "oiiiii"
         # print serial_interface1.message_queue_is_empty()
         # print serial_interface2.message_queue_is_empty()
         time.sleep(0.1)

@@ -5,11 +5,19 @@ import threading
 import serialData
 import time
 from struct import *
+import kbhit as kb
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
+# Mudar isso para ser mais generico (Apos teste funcionando)
 path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
 path2 = 'C:\\Users\\Usuário\\Desktop'
 os.chdir(path)
+# Coloca o nome da port do arduino aqui
+port = ""
+# Max baud rate = 1000000
+baud_rate = 115200
+# Voce precisa de um objeto serial_interface pra enviar dados. O metodo send_data nao eh estatico!!
+serial_interface = serialData.SerialInterface(port, baud_rate)
 
 # constantes do protocolo
 send_request = bytearray([1])
@@ -18,19 +26,23 @@ msg_start_byte = bytearray([3])
 
 # variaveis globais
 msg = bytearray([])
+# Essa msg_arrived_flag eh true quando uma resposta chegou? O nome ta meio dificil de entender. Talvez mudar o nome?
 msg_arrived_flag = threading.Event()
 stop = threading.Event()
 interrupt = threading.Event()
 ans = 's'
 
+
 def send_file():
     while ((ans == 's') or (ans == 'S')):
+        # Talvez um sleep aqui?
         while not interrupt.is_set():
             # lê o nome e a extebsão do arquivo
             #name = raw_input("Digite o nome do arquivo que deseja enviar: ")
             #ext = raw_input("Digite a extensão do arquivo: ")
 
             print "Digite o nome do arquivo que deseja enviar: "
+            name = ''
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
                     c = kb.getch()
@@ -44,6 +56,7 @@ def send_file():
                 break
             print "Digite a extensão do arquivo: "
             stop.clear()
+            ext = ''
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
                     c = kb.getch()
@@ -55,9 +68,12 @@ def send_file():
             if interrupt.is_set():
                 stop.clear()
                 break
-            
+
             arq = name + "." + ext
 
+            # Felipe: Talvez seja melhor so criar o arquivo depois de confirmado que pode ser enviado?
+            # O unico problema associado a isso seria um possivel delay entre receber a resposta e enviar o arquivo
+            # enquanto ele eh zipado e lido.
             # cria um zip e adiciona o arquivo
             zf = zipfile.ZipFile(name + ".zip", 'w')
             zf.write(arq)
@@ -74,7 +90,7 @@ def send_file():
             N_byte = bytearray(pack('i', len(data_byte)))
 
             msg = send_request + N_byte + bytearray(arq)
-            serialData.send_data(msg)
+            serial_interface.send_data(msg)
             t0 = time.clock()
             while (time.clock()-t0 < 30):
                 if msg_arrived_flag.is_set():
@@ -82,7 +98,7 @@ def send_file():
 
             if msg_arrived_flag.is_set():
                 if msg == send_ok:
-                    serialData.send_data(msg_start_byte + data_byte)
+                    serial_interface.send_data(msg_start_byte + data_byte)
                     msg_arrived_flag.clear()
                     print "Arquivo enviado com sucesso!"
                 else:
@@ -93,26 +109,34 @@ def send_file():
 
 def receive_file():
     while (ans == 's') or (ans == 'S'):
-        while serialData.message_queue_is_empty():
+        while serial_interface.message_queue_is_empty():
             time.sleep(0.01)
             pass
 
-        msg = serialData.get_message()
+        msg = serial_interface.get_message()
 
-        if msg[0] == send_request:
+        # eh necessario colocar o [0] depois do send request, do contrario vamos comparar um inteiro com um bytearray e
+        # isso nunca vai dar True. (quando pegamos somente um elemento da bytearray ele retorna um inteiro
+        if msg[0] == send_request[0]:
             interrupt.set()
+            # O usuario nao sabe o nome do arquivo ou o tamanho dele.
             receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
-            N_tuple = unpack('i',str(msg[1:5]))
+            N_tuple = unpack('i', str(msg[1:5]))
             N = N_tuple[0]
             file_name = str(msg[5:])
             msg_arrived_flag.set()
-            serialData.send_data(send_ok)
-        elif msg[0] == msg_start_byte:
+            serial_interface.send_data(send_ok)
+        elif msg[0] == msg_start_byte[0]:
             received = str(msg[1:])
-            for i in range(0,N):
+            # N nao eh o tamanho do arquivo? Nesse caso vc vai acessar indices de file_name que nao existem e tera uma
+            # exception aqui. N aparentemente nao eh usado pra nada. Quando eu falei de colocar isso na request seria
+            # pra informar o usuario do tamanho do arquivo a ser enviado. Aqui vc pode fazer range(len(file_name)) ou
+            # so faz um file_name.index('.') (acho que isso eh o melhor a se fazer.
+            for i in range(0, N):
                 if file_name[i] == '.':
                     dot = i
             r_name = file_name[0:dot]
+            # r_ext nao serve pra nada
             r_ext = file_name[dot+1:]
             with open(r_name + ".zip", 'wb') as g:
                 g.write(received)
