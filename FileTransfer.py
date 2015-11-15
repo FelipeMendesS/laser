@@ -83,8 +83,10 @@ def send_file():
                 if msg == send_ok:
                     serialData.send_data(msg_start_byte + data_byte)
                     msg_arrived_flag.clear()
+                    print "Arquivo enviado com sucesso!"
+                else:
+                    print "Falha ao enviar o arquivo"
 
-            print "Arquivo enviado com sucesso!"
             ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
 
 
@@ -97,13 +99,13 @@ def receive_file():
         msg = serialData.get_message()
 
         if msg[0] == send_request:
+            interrupt.set()
             receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
-            
-            serialData.send_data(send_ok)
             N_tuple = unpack('i',str(msg[1:5]))
             N = N_tuple[0]
             file_name = str(msg[5:])
             msg_arrived_flag.set()
+            serialData.send_data(send_ok)
         elif msg[0] == msg_start_byte:
             received = str(msg[1:])
             for i in range(0,N):
@@ -117,6 +119,7 @@ def receive_file():
             zfile.extract(file_name, path2)
             zfile.close()
             os.remove(r_name + ".zip")
+            interrupt.clear()
         else:
             msg_arrived_flag.set()
 
