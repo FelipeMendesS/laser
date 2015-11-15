@@ -19,43 +19,73 @@ msg_start_byte = bytearray([3])
 # variaveis globais
 msg = bytearray([])
 msg_arrived_flag = threading.Event()
+stop = threading.Event()
+interrupt = threading.Event()
 ans = 's'
 
 def send_file():
-    while (ans == 's') or (ans == 'S'):
-        # lê o nome e a extebsão do arquivo
-        name = raw_input("Digite o nome do arquivo que deseja enviar: ")
-        ext = raw_input("Digite a extensão do arquivo: ")
-        arq = name + "." + ext
-
-        # cria um zip e adiciona o arquivo
-        zf = zipfile.ZipFile(name + ".zip", 'w')
-        zf.write(arq)
-        zf.close()
-
-        # lê o arquivo zipado como binário
-        with open(name + ".zip",'rb') as f:
-            data = f.read()
-        os.remove(name + ".zip")
-
-
-        # prepara e envia o aqrquivo
-        data_byte = bytearray(data)
-        N_byte = bytearray(pack('i', len(data_byte)))
-
-        msg = send_request + N_byte + bytearray(arq)
-        serialData.send_data(msg)
-        t0 = time.clock()
-        while (time.clock()-t0 < 30):
-            if msg_arrived_flag.is_set():
+    while ((ans == 's') or (ans == 'S')):
+        while not interrupt.is_set():
+            # lê o nome e a extebsão do arquivo
+            #name = raw_input("Digite o nome do arquivo que deseja enviar: ")
+            #ext = raw_input("Digite a extensão do arquivo: ")
+            print "Digite o nome do arquivo que deseja enviar: "
+            while not stop.is_set() and not interrupt.is_set():
+                if kb.kbhit():
+                    c = kb.getch()
+                    print c,
+                    if ord(c) == 13:
+                        stop.set()
+                    else:
+                        name += c
+            if interrupt.is_set():
+                stop.clear()
                 break
+            print "Digite a extensão do arquivo: "
+            stop.clear()
+            while not stop.is_set() and not interrupt.is_set():
+                if kb.kbhit():
+                    c = kb.getch()
+                    print c,
+                    if ord(c) == 13:
+                        stop.set()
+                    else:
+                        ext += c
+            if interrupt.is_set():
+                stop.clear()
+                break
+            
+            arq = name + "." + ext
 
-        if msg_arrived_flag.is_set():
-            if msg == send_ok:
-                serialData.send_data(msg_start_byte + data_byte)
-                msg_arrived_flag.clear()
-        
-        ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
+            # cria um zip e adiciona o arquivo
+            zf = zipfile.ZipFile(name + ".zip", 'w')
+            zf.write(arq)
+            zf.close()
+
+            # lê o arquivo zipado como binário
+            with open(name + ".zip",'rb') as f:
+                data = f.read()
+            os.remove(name + ".zip")
+
+
+            # prepara e envia o aqrquivo
+            data_byte = bytearray(data)
+            N_byte = bytearray(pack('i', len(data_byte)))
+
+            msg = send_request + N_byte + bytearray(arq)
+            serialData.send_data(msg)
+            t0 = time.clock()
+            while (time.clock()-t0 < 30):
+                if msg_arrived_flag.is_set():
+                    break
+
+            if msg_arrived_flag.is_set():
+                if msg == send_ok:
+                    serialData.send_data(msg_start_byte + data_byte)
+                    msg_arrived_flag.clear()
+
+            print "Arquivo enviado com sucesso!"
+            ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
 
 
 def receive_file():
@@ -67,7 +97,7 @@ def receive_file():
         msg = serialData.get_message()
 
         if msg[0] == send_request:
-            receive_ans = raw_input("Deseja receber um arquivo? (s/n): ")
+            receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
             
             serialData.send_data(send_ok)
             N_tuple = unpack('i',str(msg[1:5]))
