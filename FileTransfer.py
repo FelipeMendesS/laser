@@ -9,11 +9,11 @@ import kbhit
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 # Mudar isso para ser mais generico (Apos teste funcionando)
-path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
-path2 = 'C:\\Users\\Usuário\\Desktop'
-os.chdir(path)
+# path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
+# path2 = 'C:\\Users\\Usuário\\Desktop'
+# os.chdir(path)
 # Coloca o nome da port do arduino aqui
-port = ""
+port = "/dev/tty.usbmodem1411"
 # Max baud rate = 1000000
 baud_rate = 115200
 # Voce precisa de um objeto serial_interface pra enviar dados. O metodo send_data nao eh estatico!!
@@ -90,6 +90,8 @@ def send_file():
             os.remove(name + ".zip")
 
             # prepara e envia o aqrquivo
+            # Parece razoavel deletar esse data_byte assim que o arquivo for enviado. Ele tem o potencial de ser muito
+            # grande, e eh desncessario ficar segurando esse tanto de memmoria.
             data_byte = bytearray(data)
             N_byte = bytearray(pack('i', len(data_byte)))
 
@@ -127,6 +129,7 @@ def receive_file():
             # O usuario nao sabe o nome do arquivo ou o tamanho dele. Alem disso, vc envia o ok, o usuario querendo o
             # arquivo ou nao :P
             receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
+            # O str nao parece ser necessario
             N_tuple = unpack('i', str(msg[1:5]))
             N = N_tuple[0]
             file_name = str(msg[5:])
@@ -138,9 +141,7 @@ def receive_file():
             # exception aqui. N aparentemente nao eh usado pra nada. Quando eu falei de colocar isso na request seria
             # pra informar o usuario do tamanho do arquivo a ser enviado. Aqui vc pode fazer range(len(file_name)) ou
             # so faz um file_name.index('.') (acho que isso eh o melhor a se fazer.
-            for i in range(0, N):
-                if file_name[i] == '.':
-                    dot = i
+            dot = file_name.index('.')
             r_name = file_name[0:dot]
             # r_ext nao serve pra nada
             r_ext = file_name[dot+1:]
