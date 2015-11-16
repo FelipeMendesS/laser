@@ -138,12 +138,11 @@ def receive_file():
             # exception aqui. N aparentemente nao eh usado pra nada. Quando eu falei de colocar isso na request seria
             # pra informar o usuario do tamanho do arquivo a ser enviado. Aqui vc pode fazer range(len(file_name)) ou
             # so faz um file_name.index('.') (acho que isso eh o melhor a se fazer.
-            for i in range(0, N):
-                if file_name[i] == '.':
-                    dot = i
+            # Abraço: problema corrigido, usei o index =D
+            dot = file_name.index('.')
             r_name = file_name[0:dot]
             # r_ext nao serve pra nada
-            r_ext = file_name[dot+1:]
+            # r_ext = file_name[dot+1:]
             with open(r_name + ".zip", 'wb') as g:
                 g.write(received)
             zfile = zipfile.ZipFile(r_name + ".zip")
