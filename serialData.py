@@ -98,7 +98,7 @@ class SerialInterface(object):
 
     def read_data(self):
         time.sleep(2)
-        # self.serial_port.flushInput()
+        self.serial_port.flushInput()
         index = -1
         byte_to_check = self.FIRST_POINTING_BYTE
         pointing_data = bytearray()
@@ -170,6 +170,7 @@ class SerialInterface(object):
                 self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
                 time.sleep(0.1)
             else:
+                self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
                 self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
                 time.sleep(0.1)
         while not self.stop_everything.is_set() or\
@@ -219,22 +220,24 @@ class SerialInterface(object):
         current_length = 0
         current_packet = 0
         number_of_packets = 0
+        index = 0
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
                 received_bytes.extend(self.input_queue.get(block=False))
-                if not found_packet:
-                    index = self.find_beginning_of_packet(received_bytes)
-                    if index != -1:
-                        found_packet = True
-                        received_bytes = received_bytes[index:]
+                index = 0
+            if not found_packet and index != -1:
+                index = self.find_beginning_of_packet(received_bytes)
+                if index != -1:
+                    found_packet = True
+                    received_bytes = received_bytes[index:]
             if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                 packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
                 number_of_packets,\
                 current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
             elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length) and found_packet:
                 self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
-                packet_length = 0
                 received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
+                packet_length = 0
                 found_packet = False
             current_length = len(received_bytes)
             time.sleep(0.01)
