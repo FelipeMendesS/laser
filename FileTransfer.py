@@ -79,19 +79,12 @@ def send_file():
             # Felipe: Talvez seja melhor so criar o arquivo depois de confirmado que pode ser enviado?
             # O unico problema associado a isso seria um possivel delay entre receber a resposta e enviar o arquivo
             # enquanto ele eh zipado e lido.
-            # cria um zip e adiciona o arquivo
-            zf = zipfile.ZipFile(name + ".zip", 'w')
-            zf.write(arq)
-            zf.close()
-
-            # lê o arquivo zipado como binário
-            with open(name + ".zip", 'rb') as f:
-                data = f.read()
-            os.remove(name + ".zip")
+            
 
             # prepara e envia o aqrquivo
-            data_byte = bytearray(data)
-            N_byte = bytearray(pack('i', len(data_byte)))
+            # data_byte = bytearray(data)
+            # N_byte = bytearray(pack('i', len(data_byte)))
+            N_byte = bytearray(pack('i', os.stat(arq).st_size))
 
             msg = send_request + N_byte + bytearray(arq)
             serial_interface.send_data(msg)
@@ -102,6 +95,15 @@ def send_file():
 
             if msg_arrived_flag.is_set():
                 if msg == send_ok:
+                    # cria um zip e adiciona o arquivo
+                    zf = zipfile.ZipFile(name + ".zip", 'w')
+                    zf.write(arq)
+                    zf.close()
+                    # lê o arquivo zipado como binário
+                    with open(name + ".zip", 'rb') as f:
+                        data = f.read()
+                    os.remove(name + ".zip")
+                    data_byte = bytearray(data)
                     serial_interface.send_data(msg_start_byte + data_byte)
                     msg_arrived_flag.clear()
                     print "Arquivo enviado com sucesso!"
