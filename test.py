@@ -9,7 +9,7 @@ test_array = bytearray(os.urandom(100))
 serial_interface1 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 # serial_interface2 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 
-data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100
+data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*10000
 
 # print len(data)
 # print data
