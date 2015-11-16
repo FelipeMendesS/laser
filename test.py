@@ -41,11 +41,14 @@ a = serial_interface1.get_message()
 # print a
 
 serial_interface1.send_data(a)
+serial_interface1.send_data(a)
+
 
 while serial_interface1.message_queue_is_empty():
     time.sleep(0.1)
 
 b = serial_interface1.get_message()
+
 
 
 counter = 0

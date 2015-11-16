@@ -172,7 +172,8 @@ class SerialInterface(object):
             else:
                 self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
                 time.sleep(0.1)
-        while not self.stop_everything.is_set():
+        while not self.stop_everything.is_set() or\
+                (self.stop_everything.is_set and (not self.output_queue.empty() or len(data_to_send) > 0)):
             time.sleep(0.001)
             if not self.output_queue.empty() and len(data_to_send) < 1000:
                 data_to_send.extend(self.output_queue.get(block=False))
