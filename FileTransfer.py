@@ -36,8 +36,12 @@ ans = 's'
 
 kb = kbhit.KBHit()
 
-while not serial_interface.is_link_up():
-    time.sleep(0.1)
+try:
+    while not serial_interface.is_link_up():
+        time.sleep(0.1)
+except KeyboardInterrupt:
+    serial_interface.stop_serial()
+    exit()
 
 def send_file():
     global msg, ans
@@ -54,7 +58,9 @@ def send_file():
                 if kb.kbhit():
                     c = kb.getch()
                     print c,
-                    if ord(c) == 13:
+
+                    if ord(c) == 27:
+
                         print "peguei"
                         stop.set()
                     else:
@@ -69,14 +75,15 @@ def send_file():
                 if kb.kbhit():
                     c = kb.getch()
                     print c,
-                    if ord(c) == 13:
+
+                    if ord(c) == 27:
                         stop.set()
                     else:
                         ext += c
             if interrupt.is_set():
                 stop.clear()
                 break
-
+            stop.clear()
             arq = name + "." + ext
 
             # Felipe: Talvez seja melhor so criar o arquivo depois de confirmado que pode ser enviado?
