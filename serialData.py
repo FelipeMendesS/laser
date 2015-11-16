@@ -165,9 +165,10 @@ class SerialInterface(object):
         data_to_send = bytearray()
         self.serial_port.flushOutput()
 
-        while not self.is_it_pointed.is_set():
+        while not self.is_it_pointed.is_set() and not self.stop_everything.is_set():
             if not self.received_first.is_set():
                 self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+                self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
                 time.sleep(0.1)
             else:
                 self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
