@@ -129,11 +129,11 @@ def receive_file():
             interrupt.set()
             # O usuario nao sabe o nome do arquivo ou o tamanho dele. Alem disso, vc envia o ok, o usuario querendo o
             # arquivo ou nao :P
-            receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
+            N_tuple = unpack('i', str(msg[1:5]))
+            N = N_tuple[0]
+            file_name = str(msg[5:])
+            receive_ans = raw_input("\nDeseja receber o arquivo" + file_name + "(tamanho: " + str(N) + "? (s/n): ")
             if receive_ans == 's':
-                N_tuple = unpack('i', str(msg[1:5]))
-                N = N_tuple[0]
-                file_name = str(msg[5:])
                 msg_arrived_flag.set()
                 serial_interface.send_data(send_ok)
         elif msg[0] == msg_start_byte[0]:
@@ -156,7 +156,6 @@ def receive_file():
             interrupt.clear()
         else:
             msg_arrived_flag.set()
-
 
 sending = threading.Thread(target=send_file)
 receiving = threading.Thread(target=receive_file)
