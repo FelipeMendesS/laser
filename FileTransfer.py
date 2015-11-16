@@ -79,21 +79,13 @@ def send_file():
             # Felipe: Talvez seja melhor so criar o arquivo depois de confirmado que pode ser enviado?
             # O unico problema associado a isso seria um possivel delay entre receber a resposta e enviar o arquivo
             # enquanto ele eh zipado e lido.
-            # cria um zip e adiciona o arquivo
-            zf = zipfile.ZipFile(name + ".zip", 'w')
-            zf.write(arq)
-            zf.close()
-
-            # lê o arquivo zipado como binário
-            with open(name + ".zip", 'rb') as f:
-                data = f.read()
-            os.remove(name + ".zip")
+            
 
             # prepara e envia o aqrquivo
-            # Parece razoavel deletar esse data_byte assim que o arquivo for enviado. Ele tem o potencial de ser muito
-            # grande, e eh desncessario ficar segurando esse tanto de memmoria.
-            data_byte = bytearray(data)
-            N_byte = bytearray(pack('i', len(data_byte)))
+
+            # data_byte = bytearray(data)
+            # N_byte = bytearray(pack('i', len(data_byte)))
+            N_byte = bytearray(pack('i', os.stat(arq).st_size))
 
             msg = send_request + N_byte + bytearray(arq)
             serial_interface.send_data(msg)
@@ -104,6 +96,15 @@ def send_file():
 
             if msg_arrived_flag.is_set():
                 if msg == send_ok:
+                    # cria um zip e adiciona o arquivo
+                    zf = zipfile.ZipFile(name + ".zip", 'w')
+                    zf.write(arq)
+                    zf.close()
+                    # lê o arquivo zipado como binário
+                    with open(name + ".zip", 'rb') as f:
+                        data = f.read()
+                    os.remove(name + ".zip")
+                    data_byte = bytearray(data)
                     serial_interface.send_data(msg_start_byte + data_byte)
                     msg_arrived_flag.clear()
                     print "Arquivo enviado com sucesso!"
@@ -141,14 +142,15 @@ def receive_file():
             # exception aqui. N aparentemente nao eh usado pra nada. Quando eu falei de colocar isso na request seria
             # pra informar o usuario do tamanho do arquivo a ser enviado. Aqui vc pode fazer range(len(file_name)) ou
             # so faz um file_name.index('.') (acho que isso eh o melhor a se fazer.
+            # Abraço: problema corrigido, usei o index =D
             dot = file_name.index('.')
             r_name = file_name[0:dot]
             # r_ext nao serve pra nada
-            r_ext = file_name[dot+1:]
+            # r_ext = file_name[dot+1:]
             with open(r_name + ".zip", 'wb') as g:
                 g.write(received)
             zfile = zipfile.ZipFile(r_name + ".zip")
-            zfile.extract(file_name, path2)
+            zfile.extract(file_name)
             zfile.close()
             os.remove(r_name + ".zip")
             interrupt.clear()
