@@ -36,6 +36,8 @@ ans = 's'
 
 kb = kbhit.KBHit()
 
+while not serial_interface.is_link_up():
+    time.sleep(0.1)
 
 def send_file():
     global msg, ans
@@ -51,8 +53,9 @@ def send_file():
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
                     c = kb.getch()
-                    print c,
+                    print c
                     if ord(c) == 13:
+                        print "peguei"
                         stop.set()
                     else:
                         name += c
@@ -65,7 +68,7 @@ def send_file():
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
                     c = kb.getch()
-                    print c,
+                    print c
                     if ord(c) == 13:
                         stop.set()
                     else:

@@ -260,6 +260,9 @@ class SerialInterface(object):
             self.message_queue.put(self.message)
             self.message = bytearray()
 
+    def is_link_up(self):
+        return self.is_it_pointed.is_set()
+
     # Manda uma mensagem (formato a definir) pra pedir um pacote que seja retransmitido pelo outro lado da conexao.
     # Eh importante que definamos alguma forma de identificar as mensagens unicamente, por exemplo com uma ID no header,
     # assim podemos identificar para o transmissor o ID da mensagem e pacote que deve ser retransmitido.
