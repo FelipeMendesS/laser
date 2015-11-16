@@ -130,12 +130,12 @@ def receive_file():
             # O usuario nao sabe o nome do arquivo ou o tamanho dele. Alem disso, vc envia o ok, o usuario querendo o
             # arquivo ou nao :P
             receive_ans = raw_input("\nDeseja receber um arquivo? (s/n): ")
-            # O str nao parece ser necessario
-            N_tuple = unpack('i', str(msg[1:5]))
-            N = N_tuple[0]
-            file_name = str(msg[5:])
-            msg_arrived_flag.set()
-            serial_interface.send_data(send_ok)
+            if receive_ans == 's':
+                N_tuple = unpack('i', str(msg[1:5]))
+                N = N_tuple[0]
+                file_name = str(msg[5:])
+                msg_arrived_flag.set()
+                serial_interface.send_data(send_ok)
         elif msg[0] == msg_start_byte[0]:
             received = str(msg[1:])
             # N nao eh o tamanho do arquivo? Nesse caso vc vai acessar indices de file_name que nao existem e tera uma
