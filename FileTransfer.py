@@ -13,7 +13,7 @@ import kbhit
 # path2 = 'C:\\Users\\Usuário\\Desktop'
 # os.chdir(path)
 # Coloca o nome da port do arduino aqui
-port = "/dev/tty.usbmodem1411"
+port = "COM31"
 # Max baud rate = 1000000
 baud_rate = 115200
 # Voce precisa de um objeto serial_interface pra enviar dados. O metodo send_data nao eh estatico!!
@@ -53,7 +53,7 @@ def send_file():
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
                     c = kb.getch()
-                    print c
+                    print c,
                     if ord(c) == 13:
                         print "peguei"
                         stop.set()
@@ -68,7 +68,7 @@ def send_file():
             while not stop.is_set() and not interrupt.is_set():
                 if kb.kbhit():
                     c = kb.getch()
-                    print c
+                    print c,
                     if ord(c) == 13:
                         stop.set()
                     else:
@@ -135,7 +135,7 @@ def receive_file():
             N_tuple = unpack('i', str(msg[1:5]))
             N = N_tuple[0]
             file_name = str(msg[5:])
-            receive_ans = raw_input("\nDeseja receber o arquivo" + file_name + "(tamanho: " + str(N) + "? (s/n): ")
+            receive_ans = raw_input("\nDeseja receber o arquivo" + file_name + "(tamanho: " + str(N) + ")? (s/n): ")
             if receive_ans == 's':
                 msg_arrived_flag.set()
                 serial_interface.send_data(send_ok)
