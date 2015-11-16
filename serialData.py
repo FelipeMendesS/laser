@@ -102,10 +102,8 @@ class SerialInterface(object):
         index = -1
         byte_to_check = self.FIRST_POINTING_BYTE
         pointing_data = bytearray()
+        pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
         while not self.is_it_pointed.is_set():
-            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
-            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
-            pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
             self.wait_for_data(1, 0.001)
             pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
             for j, data in enumerate(pointing_data):
@@ -119,8 +117,8 @@ class SerialInterface(object):
             if not self.received_first.is_set():
                 pointing_data = bytearray()
             elif not self.is_it_pointed.is_set() and index != -1:
-                index = -1
                 pointing_data = pointing_data[index:]
+                index = -1
             elif not self.is_it_pointed.is_set():
                 pointing_data = bytearray()
 
@@ -174,6 +172,22 @@ class SerialInterface(object):
                 self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
                 self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
                 time.sleep(0.1)
+
+        time.sleep(0.5)
+        self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+        time.sleep(0.5)
+        self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
+        self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
+
         while not self.stop_everything.is_set() or\
                 (self.stop_everything.is_set and (not self.output_queue.empty() or len(data_to_send) > 0)):
             time.sleep(0.001)

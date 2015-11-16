@@ -9,11 +9,17 @@ test_array = bytearray(os.urandom(100))
 serial_interface1 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 # serial_interface2 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 
-data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*10000
+try:
+    while not serial_interface1.is_link_up():
+        time.sleep(0.1)
+except KeyboardInterrupt:
+    serial_interface1.stop_serial()
+    exit()
+
+data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*50000
 
 # print len(data)
 # print data
-
 serial_interface1.send_data(data)
 # serial_interface2.send_data(data)
 

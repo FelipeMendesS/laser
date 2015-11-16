@@ -139,7 +139,7 @@ def receive_file():
             N_tuple = unpack('i', str(msg[1:5]))
             N = N_tuple[0]
             file_name = str(msg[5:])
-            receive_ans = raw_input("\nDeseja receber o arquivo" + file_name + "(tamanho: " + str(N) + "? (s/n): ")
+            receive_ans = raw_input("\nDeseja receber o arquivo " + file_name + "(tamanho: " + str(N) + "? (s/n): ")
             if receive_ans == 's':
                 msg_arrived_flag.set()
                 serial_interface.send_data(send_ok)

@@ -15,3 +15,7 @@ try:
 except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
+
+time.sleep(2)
+
+serial_interface.stop_serial()
