@@ -58,7 +58,9 @@ def send_file():
                 if kb.kbhit():
                     c = kb.getch()
                     print c,
+
                     if ord(c) == 27:
+
                         print "peguei"
                         stop.set()
                     else:
@@ -73,6 +75,7 @@ def send_file():
                 if kb.kbhit():
                     c = kb.getch()
                     print c,
+
                     if ord(c) == 27:
                         stop.set()
                     else:
@@ -80,7 +83,7 @@ def send_file():
             if interrupt.is_set():
                 stop.clear()
                 break
-
+            stop.clear()
             arq = name + "." + ext
 
             # Felipe: Talvez seja melhor so criar o arquivo depois de confirmado que pode ser enviado?
