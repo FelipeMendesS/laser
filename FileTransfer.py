@@ -9,11 +9,11 @@ import kbhit
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 # Mudar isso para ser mais generico (Apos teste funcionando)
-path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
-path2 = 'C:\\Users\\Usuário\\Desktop'
-
+# path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
+# path2 = 'C:\\Users\\Usuário\\Desktop'
+# os.chdir(path)
 # Coloca o nome da port do arduino aqui
-port = ""
+port = "/dev/tty.usbmodem1411"
 # Max baud rate = 1000000
 baud_rate = 115200
 # Voce precisa de um objeto serial_interface pra enviar dados. O metodo send_data nao eh estatico!!
@@ -82,6 +82,7 @@ def send_file():
             
 
             # prepara e envia o aqrquivo
+
             # data_byte = bytearray(data)
             # N_byte = bytearray(pack('i', len(data_byte)))
             N_byte = bytearray(pack('i', os.stat(arq).st_size))
@@ -149,14 +150,12 @@ def receive_file():
             with open(r_name + ".zip", 'wb') as g:
                 g.write(received)
             zfile = zipfile.ZipFile(r_name + ".zip")
-            zfile.extract(file_name, path2)
+            zfile.extract(file_name)
             zfile.close()
             os.remove(r_name + ".zip")
             interrupt.clear()
         else:
             msg_arrived_flag.set()
-
-
 
 sending = threading.Thread(target=send_file)
 receiving = threading.Thread(target=receive_file)

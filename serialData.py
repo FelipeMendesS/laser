@@ -99,15 +99,14 @@ class SerialInterface(object):
     def read_data(self):
         time.sleep(2)
         self.serial_port.flushInput()
-        initial_data = bytearray()
         index = -1
         byte_to_check = self.FIRST_POINTING_BYTE
+        pointing_data = bytearray()
         while not self.is_it_pointed.is_set():
-            pointing_data = bytearray()
             pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
             pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
             pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
-            self.wait_for_data(1,0.001)
+            self.wait_for_data(1, 0.001)
             pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
             for j, data in enumerate(pointing_data):
                 if data == byte_to_check and not self.received_first.is_set():
@@ -169,18 +168,21 @@ class SerialInterface(object):
         while not self.is_it_pointed.is_set():
             if not self.received_first.is_set():
                 self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
-                time.sleep(0.001)
+                time.sleep(0.1)
             else:
+                self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
                 self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
-                time.sleep(0.001)
-        while not self.stop_everything.is_set():
+                time.sleep(0.1)
+        while not self.stop_everything.is_set() or\
+                (self.stop_everything.is_set and (not self.output_queue.empty() or len(data_to_send) > 0)):
             time.sleep(0.001)
             if not self.output_queue.empty() and len(data_to_send) < 1000:
                 data_to_send.extend(self.output_queue.get(block=False))
             if len(data_to_send) < byte_rate:
                 number_of_bytes_sent = len(data_to_send)
             try:
-                self.serial_port.write(data_to_send[:number_of_bytes_sent])
+                if len(data_to_send) > 0:
+                    self.serial_port.write(data_to_send[:number_of_bytes_sent])
             except serial.SerialException:
                 if not self.serial_port.isOpen():
                     self.stop_serial()
@@ -218,21 +220,24 @@ class SerialInterface(object):
         current_length = 0
         current_packet = 0
         number_of_packets = 0
+        index = 0
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
                 received_bytes.extend(self.input_queue.get(block=False))
-                if not found_packet:
-                    index = self.find_beginning_of_packet(received_bytes)
-                    if index != -1:
-                        found_packet = True
-                        received_bytes = received_bytes[index:]
+                index = 0
+            if not found_packet and index != -1:
+                index = self.find_beginning_of_packet(received_bytes)
+                if index != -1:
+                    found_packet = True
+                    received_bytes = received_bytes[index:]
             if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                 packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                number_of_packets, current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+                number_of_packets,\
+                current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
             elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length) and found_packet:
                 self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
-                packet_length = 0
                 received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
+                packet_length = 0
                 found_packet = False
             current_length = len(received_bytes)
             time.sleep(0.01)
@@ -273,8 +278,3 @@ class SerialInterface(object):
 
     def send_acknowledgement(self, packet_number):
         return
-
-
-
-
-

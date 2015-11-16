@@ -6,13 +6,13 @@ import os
 
 test_array = bytearray(os.urandom(100))
 
-serial_interface1 = serialData.SerialInterface("COM31", 1000000)
+serial_interface1 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 # serial_interface2 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
 
 data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100
 
-print len(data)
-print data
+# print len(data)
+# print data
 
 serial_interface1.send_data(data)
 # serial_interface2.send_data(data)
@@ -38,9 +38,11 @@ except:
 
 # print data
 a = serial_interface1.get_message()
-print a
+# print a
 
 serial_interface1.send_data(a)
+serial_interface1.send_data(a)
+
 
 while serial_interface1.message_queue_is_empty():
     time.sleep(0.1)
@@ -48,33 +50,34 @@ while serial_interface1.message_queue_is_empty():
 b = serial_interface1.get_message()
 
 
+
 counter = 0
 for i, j in zip(a, b):
     if i != j:
         counter += 1
-print counter
+# print counter
 
 if counter == 0:
     print "xinarow"
     while serial_interface1.message_queue_is_empty():
         time.sleep(0.1)
     b = serial_interface1.get_message()
-    print b
+    # print b
 
 # b = serial_interface2.get_message()
-print b
+# print b
 
 counter = 0
 for i, j in zip(b, data):
     if i != j:
         counter += 1
-print counter
+# print counter
 
 counter = 0
 for i, j in zip(a, data):
     if i != j:
         counter += 1
-print counter
+# print counter
 
 
 print bytearray(b) == data
