@@ -110,7 +110,10 @@ def send_file():
                     print "/nFile not found."
                     ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
                     continue
-                msg = send_request + N_byte + bytearray(arq)
+                text_array = bytearray()
+                for character in arq:
+                    text_array.append(ord(character))
+                msg = send_request + N_byte + text_array
                 serial_interface.send_data(msg)
                 t0 = time.clock()
                 while time.clock()-t0 < 30:
