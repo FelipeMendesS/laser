@@ -71,7 +71,6 @@ class SerialInterface(object):
 
     def send_data(self, file_to_send):
         if not file_to_send == '':
-            print file_to_send
             message_length = len(file_to_send)
             last_packet = int((message_length - 1)/self.MAX_PACKET_LENGTH) + 1
             for current_packet in range(1, last_packet + 1):
@@ -232,9 +231,9 @@ class SerialInterface(object):
         found_packet = False
         # debug variables (delete later)
         packet_length = 0
-        current_length = 0
-        current_packet = 0
-        number_of_packets = 0
+        # current_length = 0
+        # current_packet = 0
+        # number_of_packets = 0
         index = 0
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
@@ -247,14 +246,14 @@ class SerialInterface(object):
                     received_bytes = received_bytes[index:]
             if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                 packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                number_of_packets,\
-                current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+                # number_of_packets,\
+                # current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
             elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length) and found_packet:
                 self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
                 received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
                 packet_length = 0
                 found_packet = False
-            current_length = len(received_bytes)
+            # current_length = len(received_bytes)
             time.sleep(0.01)
 
     # Add option for different types of packets

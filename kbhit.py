@@ -20,6 +20,7 @@ GNU General Public License for more details.
 
 import os
 import time
+import sys
 
 # Windows
 if os.name == 'nt':
@@ -135,12 +136,11 @@ if __name__ == "__main__":
 
     calc.start()
     while True:
-
         if kb.kbhit():
             c = kb.getch()
             if ord(c) == 27: # ESC
                 stop.set()
                 break
-            print c
-
+            # print c
+            sys.stdout.write(c)
     kb.set_normal_term()
