@@ -115,6 +115,8 @@ class SerialInterface(object):
         pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
         while not self.is_it_pointed.is_set():
             self.wait_for_data(1, 0.001)
+            if self.stop_everything.is_set():
+                break
             pointing_data.extend(self.serial_port.read((self.serial_port.inWaiting())))
             for j, data in enumerate(pointing_data):
                 if data == byte_to_check and not self.received_first.is_set():
@@ -155,6 +157,8 @@ class SerialInterface(object):
         # # read data from serial port continuously
         while not self.stop_everything.is_set():
             self.wait_for_data(1, 0.001)
+            if self.stop_everything.is_set():
+                break
             self.input_queue.put(self.serial_port.read(self.serial_port.inWaiting()), False)
 
         self.writing.join()
@@ -215,21 +219,6 @@ class SerialInterface(object):
                     raise
             data_to_send = data_to_send[number_of_bytes_sent:]
             number_of_bytes_sent = byte_rate
-
-    def join_packet(self):
-        parts_list = []
-        while not self.stop_everything.is_set():
-            if self.input_queue.empty():
-                time.sleep(0.01)
-            else:
-                parts_list.append(self.input_queue.get())
-                length = 0
-                for item in parts_list:
-                    length += len(item)
-                if length >= 10000:
-                    all_data = b"".join(parts_list)
-                    self.message_queue.put(all_data[:10000], block=False)
-                    parts_list = [all_data[10000:]]
 
     def stop_serial(self):
         if not self.stop_everything.is_set():

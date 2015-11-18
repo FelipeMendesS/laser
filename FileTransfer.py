@@ -201,6 +201,7 @@ try:
     receiving.join()
 except KeyboardInterrupt:
     stop_program.set()
+    serial_interface.stop_serial()
     exit()
 
 # simulando a recepção

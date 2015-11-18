@@ -3,11 +3,20 @@ import serial
 import struct
 import time
 import os
+import glob
 
 test_array = bytearray(os.urandom(100))
 
-serial_interface1 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
-# serial_interface2 = serialData.SerialInterface("/dev/tty.usbmodem1411", 1000000)
+
+if os.name == 'nt':
+    number = raw_input("Qual o numero da porta COM na qual o arduino esta conectado?")
+    port = "COM" + str(number)
+elif os.name == 'posix':
+    port_list = []
+    port_list += glob('/dev/tty.usbmodem*') + glob('/dev/ttyACM*') + glob('/dev/ttyUSB*')
+    port = port_list[0]
+
+serial_interface1 = serialData.SerialInterface(port, 1000000)
 
 try:
     while not serial_interface1.is_link_up():
