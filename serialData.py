@@ -20,7 +20,7 @@ class SerialInterface(object):
     DATA_PACKET_B = 0x0055aaff
     ACK_PACKET_B = 0x00aa55ff
     RETRANS_PACKET_B = 0xffaa5500
-    MAX_PACKET_LENGTH = 12500
+    MAX_PACKET_LENGTH = 64000
     HEADER_LENGTH = 8
     FIRST_POINTING_BYTE = 0x55
     LAST_POINTING_BYTE = 0xaa
@@ -43,6 +43,8 @@ class SerialInterface(object):
             self.reading = threading.Thread(target=self.read_data)
             self.writing = threading.Thread(target=self.write_data)
             self.concatenating = threading.Thread(target=self.concatenate_received_bytes)
+            self.current_packet = 0
+            self.last_packet = 0
             self.reading.start()
             self.writing.start()
             self.concatenating.start()
@@ -87,6 +89,15 @@ class SerialInterface(object):
                 packet += bytearray(struct.pack('BB', last_packet, current_packet))
                 packet += bytearray(file_to_send[pointer_packet_begin:pointer_packet_end])
                 self.output_queue.put(packet, False)
+
+    def total_number_of_packets(self):
+        return self.last_packet
+
+    def current_processed_packet(self):
+        if self.current_packet == 0 and self.last_packet != 0:
+            return self.last_packet
+        else:
+            return self.current_packet
 
     # Interface com o abraco termina
 
@@ -231,9 +242,6 @@ class SerialInterface(object):
         found_packet = False
         # debug variables (delete later)
         packet_length = 0
-        # current_length = 0
-        # current_packet = 0
-        # number_of_packets = 0
         index = 0
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
@@ -246,15 +254,14 @@ class SerialInterface(object):
                     received_bytes = received_bytes[index:]
             if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                 packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                # number_of_packets,\
-                # current_packet = struct.unpack('BB', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
             elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length) and found_packet:
                 self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
                 received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
                 packet_length = 0
                 found_packet = False
+            if self.input_queue.qsize() < 100:
+                time.sleep(0.001)
             # current_length = len(received_bytes)
-            time.sleep(0.01)
 
     # Add option for different types of packets
     def find_beginning_of_packet(self, byte_array):
@@ -269,8 +276,9 @@ class SerialInterface(object):
     # a fila de mensagens.
     def interpret_packets(self, byte_array):
         self.message += byte_array[self.HEADER_LENGTH:]
-        number_of_packets, current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
-        if current_packet == number_of_packets:
+        self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+        if self.current_packet == self.last_packet:
+            self.current_packet = 0
             self.message_queue.put(self.message)
             self.message = bytearray()
 
