@@ -13,7 +13,7 @@ if os.name == 'nt':
     port = "COM" + str(number)
 elif os.name == 'posix':
     port_list = []
-    port_list += glob('/dev/tty.usbmodem*') + glob('/dev/ttyACM*') + glob('/dev/ttyUSB*')
+    port_list += glob.glob('/dev/tty.usbmodem*') + glob.glob('/dev/ttyACM*') + glob.glob('/dev/ttyUSB*')
     port = port_list[0]
 
 serial_interface1 = serialData.SerialInterface(port, 1000000)
