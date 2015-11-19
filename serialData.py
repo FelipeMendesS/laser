@@ -266,6 +266,8 @@ class SerialInterface(object):
     def interpret_packets(self, byte_array):
         self.message += byte_array[self.HEADER_LENGTH:]
         self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+        print self.last_packet, self.current_packet
+        print self.output_queue.qsize()
         if self.current_packet == self.last_packet:
             self.current_packet = 0
             self.message_queue.put(self.message)
