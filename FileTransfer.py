@@ -72,6 +72,7 @@ def send_file():
                     if kb.kbhit():
                         c = kb.getch()
                         stdout.write(c)
+                        stdout.flush()
                         if ord(c) == 27:
                             stop.set()
                         else:
@@ -89,6 +90,7 @@ def send_file():
                     if kb.kbhit():
                         c = kb.getch()
                         stdout.write(c)
+                        stdout.flush()
                         if ord(c) == 27:
                             stop.set()
                         else:
@@ -180,10 +182,15 @@ def receive_file():
                 # r_ext = file_name[dot+1:]
                 with open(r_name + ".zip", 'wb') as g:
                     g.write(received)
-                zfile = zipfile.ZipFile(r_name + ".zip")
-                zfile.extract(file_name)
-                zfile.close()
-                os.remove(r_name + ".zip")
+                # TODO: put exception here for when the zip file is corrupted
+                try:
+                    zfile = zipfile.ZipFile(r_name + ".zip")
+                    zfile.extract(file_name)
+                    zfile.close()
+                except zipfile.BadZipfile:
+                    print "File arrived corrupted!"
+                else:
+                    os.remove(r_name + ".zip")
                 interrupt.clear()
             else:
                 msg_arrived_flag.set()
