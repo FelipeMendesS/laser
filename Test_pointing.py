@@ -4,7 +4,7 @@ import struct
 import time
 import os
 
-port = "/dev/tty.usbmodem1411"
+port = "COM32"
 # Max baud rate = 1000000
 baud_rate = 115200
 # Voce precisa de um objeto serial_interface pra enviar dados. O metodo send_data nao eh estatico!!
