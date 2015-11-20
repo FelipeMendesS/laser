@@ -36,15 +36,29 @@ print "Link connected. Press ESC to close your program and the receiver"
 
 c = ''
 b = bytearray()
+current_line = ''
 
 try:
     while 1:
         if kb.kbhit():
             c = kb.getch()
             b.append(ord(c))
-            stdout.write(c)
-            stdout.write(str(ord(c)))
-            stdout.flush()
+            if ord(c) != 10 and ord(c) != 127:
+                current_line += c
+            elif ord(c) != 127:
+                current_line = ''
+            if ord(c) != 127 or len(current_line) == 0:
+                stdout.write(c)
+                stdout.flush()
+            elif ord(c) == 127:
+                stdout.write('\r')
+                for i in range(len(current_line)):
+                    stdout.write(' ')
+                stdout.write('\r')
+                current_line = current_line[:len(current_line)-1]
+                for character in current_line:
+                    stdout.write(character)
+                stdout.flush()
             serial_interface.send_data(bytearray([ord(c)]))
             if ord(c) == 27:
                 print ""
