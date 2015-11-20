@@ -69,24 +69,29 @@ def send_file():
                 # name = raw_input("Digite o nome do arquivo que deseja enviar: ")
                 # ext = raw_input("Digite a extensão do arquivo: ")
 
-                print "Digite o nome do arquivo que deseja enviar: "
+                print "\nDigite o nome do arquivo que deseja enviar: "
                 name = ''
-                while not stop.is_set() and not interrupt.is_set() and not stop_program.is_set():
-                    if kb.kbhit():
-                        c = kb.getch()
-                        stdout.write(c)
-                        stdout.flush()
-                        if ord(c) == 27:
-                            stop.set()
-                        else:
-                            name += c
+                try:
+                    while not stop.is_set() and not interrupt.is_set() and not stop_program.is_set():
+                        if kb.kbhit():
+                            c = kb.getch()
+                            stdout.write(c)
+                            stdout.flush()
+                            if ord(c) == 27:
+                                stop.set()
+                            else:
+                                name += c
+                except KeyboardInterrupt:
+                    stop_program.set()
+                    serial_interface.stop_serial()
+                    exit()
                 if stop_program.is_set():
                     serial_interface.stop_serial()
                     exit()
                 if interrupt.is_set():
                     stop.clear()
                     break
-                print "Digite a extensao do arquivo: "
+                print "\n Digite a extensao do arquivo: "
                 stop.clear()
                 ext = ''
                 while not stop.is_set() and not interrupt.is_set() and not stop_program.is_set():
@@ -112,8 +117,8 @@ def send_file():
                 try:
                     N_byte = bytearray(pack('i', os.stat(arq).st_size))
                 except OSError:
-                    print "/nFile not found."
-                    ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
+                    print "\n File not found."
+                    ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): \n")
                     continue
                 text_array = bytearray()
                 for character in arq:
@@ -144,13 +149,14 @@ def send_file():
                         print "Arquivo enviado com sucesso!"
                     else:
                         print "Falha ao enviar o arquivo"
-                ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
+                ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): \n")
     except KeyboardInterrupt:
         stop_program.set()
         serial_interface.stop_serial()
         exit()
     stop_program.set()
     serial_interface.stop_serial()
+    exit()
 
 
 def receive_file():
@@ -159,8 +165,10 @@ def receive_file():
         while (ans == 's') or (ans == 'S') and not stop_program.is_set():
             while serial_interface.message_queue_is_empty() and not stop_program.is_set() and ((ans == 's') or (ans == 'S')):
                 time.sleep(0.01)
-
-            msg = serial_interface.get_message()
+            if not  serial_interface.message_queue_is_empty():
+                msg = serial_interface.get_message()
+            else:
+                continue
 
             # eh necessario colocar o [0] depois do send request, do contrario vamos comparar um inteiro com um bytearray e
             # isso nunca vai dar True. (quando pegamos somente um elemento da bytearray ele retorna um inteiro
@@ -171,7 +179,7 @@ def receive_file():
                 N_tuple = unpack('i', str(msg[1:5]))
                 N = N_tuple[0]
                 file_name = str(msg[5:])
-                receive_ans = raw_input("\nDeseja receber o arquivo " + file_name + "(tamanho: " + str(N) + "? (s/n): ")
+                receive_ans = raw_input("\n Deseja receber o arquivo " + file_name + "(tamanho: " + str(N) + "? (s/n): ")
                 if receive_ans == 's' or receive_ans == 'S':
                     msg_arrived_flag.set()
                     serial_interface.send_data(send_ok)
@@ -206,6 +214,7 @@ def receive_file():
         exit()
     stop_program.set()
     serial_interface.stop_serial()
+    exit()
 
 sending = threading.Thread(target=send_file)
 receiving = threading.Thread(target=receive_file)

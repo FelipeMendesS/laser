@@ -29,12 +29,17 @@ except KeyboardInterrupt:
     exit()
     
 try:
-    while serial_interface.message_queue_is_empty():
-        time.sleep(0.01)
+    while 1:
+        while serial_interface.message_queue_is_empty():
+            time.sleep(0.01)
 
-    msg = serial_interface.get_message()
-    print msg
+        msg = serial_interface.get_message()
+        stdout.write()
+        stdout.flush()
+        if msg[0] == 27:
+            serial_interface.stop_serial()
+            exit()
 
 except KeyboardInterrupt:
+    serial_interface.stop_serial()
     exit()
-        

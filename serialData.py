@@ -266,8 +266,8 @@ class SerialInterface(object):
     def interpret_packets(self, byte_array):
         self.message += byte_array[self.HEADER_LENGTH:]
         self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
-        print self.last_packet, self.current_packet
-        print self.output_queue.qsize()
+        # print self.last_packet, self.current_packet
+        # print self.output_queue.qsize()
         if self.current_packet == self.last_packet:
             self.current_packet = 0
             self.message_queue.put(self.message)
@@ -275,6 +275,10 @@ class SerialInterface(object):
 
     def is_link_up(self):
         return self.is_it_pointed.is_set()
+
+    def simplex_mode(self):
+        time.sleep(2)
+        self.is_it_pointed.set()
 
     # Manda uma mensagem (formato a definir) pra pedir um pacote que seja retransmitido pelo outro lado da conexao.
     # Eh importante que definamos alguma forma de identificar as mensagens unicamente, por exemplo com uma ID no header,

@@ -21,9 +21,13 @@ serial_interface = serialData.SerialInterface(port, baud_rate)
 
 kb = kbhit.KBHit()
 
+time.sleep(2)
+serial_interface.simplex_mode()
+
 try:
     while not serial_interface.is_link_up():
         time.sleep(0.1)
+
 except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
@@ -31,13 +35,18 @@ except KeyboardInterrupt:
 c = ''
 b = bytearray()
 
-while 1:
-    if kb.kbhit():
-        c = kb.getch()
-        b.append(ord(c))
-        stdout.write(c)
-        stdout.flush()
-        serial_interface.send_data(bytearray([ord(c)]))
-        if ord(c) == 27:
-            serial_interface.stop_serial()
-            exit()
+try:
+    while 1:
+        if kb.kbhit():
+            c = kb.getch()
+            b.append(ord(c))
+            stdout.write(c)
+            stdout.flush()
+            serial_interface.send_data(bytearray([ord(c)]))
+            if ord(c) == 27:
+                serial_interface.stop_serial()
+                exit()
+
+except KeyboardInterrupt:
+    serial_interface.stop_serial()
+    exit()
