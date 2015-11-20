@@ -46,12 +46,16 @@ try:
             stdout.write(msg)
             stdout.flush()
         elif msg[0] == 127:
-            current_line = current_line[:len(current_line)-1]
             stdout.write('\r')
+            for i in range(len(current_line)):
+                stdout.write(' ')
+            stdout.write('\r')
+            current_line = current_line[:len(current_line)-1]
             for character in current_line:
                 stdout.write(character)
             stdout.flush()
         if msg[0] == 27:
+            print ""
             serial_interface.stop_serial()
             exit()
 

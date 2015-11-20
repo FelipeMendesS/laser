@@ -47,6 +47,7 @@ try:
             stdout.flush()
             serial_interface.send_data(bytearray([ord(c)]))
             if ord(c) == 27:
+                print ""
                 serial_interface.stop_serial()
                 exit()
 
