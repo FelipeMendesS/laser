@@ -22,6 +22,9 @@ if name == 'nt':
 elif name == 'posix':
     port_list = []
     port_list += glob('/dev/tty.usbmodem*') + glob('/dev/ttyACM*') + glob('/dev/ttyUSB*')
+    while len(port_list) == 0:
+        time.sleep(1)
+        port_list += glob('/dev/tty.usbmodem*') + glob('/dev/ttyACM*') + glob('/dev/ttyUSB*')
     port = port_list[0]
 
 # Max baud rate = 1000000
@@ -83,7 +86,7 @@ def send_file():
                 if interrupt.is_set():
                     stop.clear()
                     break
-                print "Digite a extensão do arquivo: "
+                print "Digite a extensao do arquivo: "
                 stop.clear()
                 ext = ''
                 while not stop.is_set() and not interrupt.is_set() and not stop_program.is_set():
@@ -146,6 +149,8 @@ def send_file():
         stop_program.set()
         serial_interface.stop_serial()
         exit()
+    stop_program.set()
+    serial_interface.stop_serial()
 
 
 def receive_file():
@@ -196,7 +201,11 @@ def receive_file():
             else:
                 msg_arrived_flag.set()
     except KeyboardInterrupt:
+        stop_program.set()
+        serial_interface.stop_serial()
         exit()
+    stop_program.set()
+    serial_interface.stop_serial()
 
 sending = threading.Thread(target=send_file)
 receiving = threading.Thread(target=receive_file)
