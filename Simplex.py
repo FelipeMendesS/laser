@@ -43,6 +43,7 @@ try:
             c = kb.getch()
             b.append(ord(c))
             stdout.write(c)
+            stdout.write(str(ord(c)))
             stdout.flush()
             serial_interface.send_data(bytearray([ord(c)]))
             if ord(c) == 27:

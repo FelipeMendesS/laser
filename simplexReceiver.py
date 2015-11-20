@@ -38,14 +38,14 @@ try:
             time.sleep(0.01)
 
         msg = serial_interface.get_message()
-        if msg[0] != 10 and msg[0] != 8:
+        if msg[0] != 10 and msg[0] != 127:
             current_line += chr(msg[0])
-        elif msg[0] != 8:
+        elif msg[0] != 127:
             current_line = ''
-        if msg[0] != 8 or len(current_line) == 0:
+        if msg[0] != 127 or len(current_line) == 0:
             stdout.write(msg)
             stdout.flush()
-        else:
+        elif msg[0] == 127:
             current_line = current_line[:len(current_line)-1]
             stdout.write('\r')
             for character in current_line:
