@@ -29,12 +29,12 @@ except KeyboardInterrupt:
     exit()
     
 try:
-	while serial_interface.message_queue_is_empty() and not stop_program.is_set() and ((ans == 's') or (ans == 'S')):
-	    time.sleep(0.01)
+    while serial_interface.message_queue_is_empty():
+        time.sleep(0.01)
 
-	msg = serial_interface.get_message()
-	print msg
+    msg = serial_interface.get_message()
+    print msg
 
 except KeyboardInterrupt:
-        exit()
+    exit()
         

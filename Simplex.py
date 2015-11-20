@@ -28,13 +28,16 @@ except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
 
+c = ''
+b = bytearray()
+
 while 1:
     if kb.kbhit():
         c = kb.getch()
+        b.append(ord(c))
         stdout.write(c)
         stdout.flush()
-        serial_interface.send_data(bytearray(c))
-    if ord(c) == 27:
-        serial_interface.stop_serial()
-        exit()
-        
+        serial_interface.send_data(bytearray([ord(c)]))
+        if ord(c) == 27:
+            serial_interface.stop_serial()
+            exit()
