@@ -1,8 +1,10 @@
+import os
+import threading
 import serialData
-import serial
-import struct
 import time
+from sys import stdout, exit
 from os import name
+import kbhit
 from glob import glob
 
 if name == 'nt':
@@ -13,10 +15,12 @@ elif name == 'posix':
     port_list += glob('/dev/tty.usbmodem*') + glob('/dev/ttyACM*') + glob('/dev/ttyUSB*')
     port = port_list[0]
 
-# Max baud rate = 1000000
 baud_rate = 1000000
-# Voce precisa de um objeto serial_interface pra enviar dados. O metodo send_data nao eh estatico!!
+
 serial_interface = serialData.SerialInterface(port, baud_rate)
+
+kb = kbhit.KBHit()
+
 try:
     while not serial_interface.is_link_up():
         time.sleep(0.1)
@@ -24,8 +28,16 @@ except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
 
-time.sleep(2)
+c = ''
+b = bytearray()
 
-print("Link is UP!")
-
-serial_interface.stop_serial()
+while 1:
+    if kb.kbhit():
+        c = kb.getch()
+        b.append(ord(c))
+        stdout.write(c)
+        stdout.flush()
+        serial_interface.send_data(bytearray([ord(c)]))
+        if ord(c) == 27:
+            serial_interface.stop_serial()
+            exit()
