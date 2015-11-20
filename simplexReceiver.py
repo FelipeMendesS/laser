@@ -29,15 +29,28 @@ except KeyboardInterrupt:
     exit()
 
 print "Starting text reception"
-    
+
+current_line = ''
+
 try:
     while 1:
         while serial_interface.message_queue_is_empty():
             time.sleep(0.01)
 
         msg = serial_interface.get_message()
-        stdout.write(msg)
-        stdout.flush()
+        if msg[0] != 10 and msg[0] != 8:
+            current_line += chr(msg[0])
+        elif msg[0] != 8:
+            current_line = ''
+        if msg[0] != 8 or len(current_line) == 0:
+            stdout.write(msg)
+            stdout.flush()
+        else:
+            current_line = current_line[:len(current_line)-1]
+            stdout.write('\r')
+            for character in current_line:
+                stdout.write(character)
+            stdout.flush()
         if msg[0] == 27:
             serial_interface.stop_serial()
             exit()
