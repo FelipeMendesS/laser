@@ -27,6 +27,8 @@ try:
 except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
+
+print "Starting text reception"
     
 try:
     while 1:
@@ -34,7 +36,7 @@ try:
             time.sleep(0.01)
 
         msg = serial_interface.get_message()
-        stdout.write()
+        stdout.write(msg)
         stdout.flush()
         if msg[0] == 27:
             serial_interface.stop_serial()

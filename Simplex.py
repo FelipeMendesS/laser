@@ -32,6 +32,8 @@ except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
 
+print "Link connected. Press ESC to close your program and the receiver"
+
 c = ''
 b = bytearray()
 
