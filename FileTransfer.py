@@ -143,6 +143,8 @@ def send_file():
                         print "Falha ao enviar o arquivo"
                 ans = raw_input("Gostaria de enviar ou receber outro arquivo? (s/n): ")
     except KeyboardInterrupt:
+        stop_program.set()
+        serial_interface.stop_serial()
         exit()
 
 
@@ -186,11 +188,10 @@ def receive_file():
                 try:
                     zfile = zipfile.ZipFile(r_name + ".zip")
                     zfile.extract(file_name)
-                    zfile.close()
                 except zipfile.BadZipfile:
                     print "File arrived corrupted!"
-                else:
-                    os.remove(r_name + ".zip")
+                zfile.close()
+                os.remove(r_name + ".zip")
                 interrupt.clear()
             else:
                 msg_arrived_flag.set()
