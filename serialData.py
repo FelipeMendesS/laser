@@ -4,6 +4,8 @@ import time
 import Queue
 import struct
 # import bitarray
+import zfec
+import numpy as np
 
 # It seems to be reasonable for us to create differents initial bytes for the packets depending if we are requesting a
 # retransmission or acknowledging the data being received or asking for a retransmission. Just as an example I'll start
@@ -77,18 +79,51 @@ class SerialInterface(object):
             last_packet = int((message_length - 1)/self.MAX_PACKET_LENGTH) + 1
             for current_packet in range(1, last_packet + 1):
                 pointer_packet_begin = (current_packet - 1) * self.MAX_PACKET_LENGTH
-
                 if (current_packet != last_packet) or (message_length % self.MAX_PACKET_LENGTH == 0):
                     pointer_packet_end = pointer_packet_begin + self.MAX_PACKET_LENGTH
                 else:
                     pointer_packet_end = pointer_packet_begin + message_length % self.MAX_PACKET_LENGTH
-
                 packet_length = pointer_packet_end - pointer_packet_begin
                 packet = bytearray(struct.pack('I', self.DATA_PACKET_B))
                 packet += bytearray(struct.pack('H', packet_length))
                 packet += bytearray(struct.pack('BB', last_packet, current_packet))
-                packet += bytearray(file_to_send[pointer_packet_begin:pointer_packet_end])
+                packet += bytearray(SerialInterface.include_error_correction(file_to_send[pointer_packet_begin:pointer_packet_end]))
                 self.output_queue.put(packet, False)
+
+    @staticmethod
+    def include_error_correction(packet):
+        number_of_chunks = 100
+        original_packet = packet[:]
+        packet_list = []
+        if len(original_packet) >= 10000:
+            packet_list = SerialInterface.split_packet(original_packet, number_of_chunks)
+            packet_encoder = zfec.Encoder(number_of_chunks, 107)
+            packet_list = packet_encoder.encode(packet_list)
+            for i in range(len(packet_list)):
+                packet_list[i] += bytearray(struct.pack('I', np.frombuffer(packet_list[i], 'uint8').sum()))
+            final_packet = bytearray()
+            for chunk in packet_list:
+                final_packet += chunk
+            return final_packet
+        else:
+            return original_packet + bytearray(struct.pack('I', np.frombuffer(original_packet, 'uint8').sum()))
+
+    @staticmethod
+    def split_packet(packet, number_of_parts):
+        if len(packet) % 100 != 0:
+            packet += bytearray(100 - (len(packet) % 100))
+        division = len(packet) / number_of_parts
+        return [packet[division * i: division * (i + 1)] for i in xrange(number_of_parts)]
+
+    @staticmethod
+    def real_packet_length(packet_length):
+        if packet_length < 10000:
+            return packet_length + 4
+        else:
+            if packet_length % 100 == 0:
+                return packet_length * 107 / 100 + 4 * 107
+            else:
+                return (packet_length / 100 + 1) * 107 + 4 * 107
 
     def total_number_of_packets(self):
         return self.last_packet
@@ -231,6 +266,7 @@ class SerialInterface(object):
         found_packet = False
         # debug variables (delete later)
         packet_length = 0
+        total_packet_length = 0
         index = 0
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
@@ -243,9 +279,10 @@ class SerialInterface(object):
                     received_bytes = received_bytes[index:]
             if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                 packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-            elif len(received_bytes) >= (self.HEADER_LENGTH + packet_length) and found_packet:
-                self.interpret_packets(received_bytes[:packet_length + self.HEADER_LENGTH])
-                received_bytes = received_bytes[packet_length + self.HEADER_LENGTH:]
+                total_packet_length = SerialInterface.real_packet_length(packet_length)
+            elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
+                self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length)
+                received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
                 packet_length = 0
                 found_packet = False
             if self.input_queue.qsize() < 100:
@@ -260,14 +297,45 @@ class SerialInterface(object):
                 return i
         return -1
 
+    # If the packet is corrupted in an irreversible way this function
+    # just returns 0. Otherwise it returns the original packet.
+    @staticmethod
+    def recover_original_packet(packet, packet_size):
+        if packet_size < 10000:
+            if struct.unpack('I', packet[-4:])[0] != np.frombuffer(packet[:-4], 'uint8').sum():
+                return 0
+            return packet[:-4]
+        packet_list = SerialInterface.split_packet(packet, 107)
+        correct_packet_list = []
+        list_of_correct_chunks = []
+        for i, chunk in enumerate(packet_list):
+            checksum = struct.unpack('I', chunk[-4:])[0]
+            if checksum == np.frombuffer(chunk[:-4], 'uint8').sum():
+                list_of_correct_chunks.append(chunk[:-4])
+                correct_packet_list.append(i)
+                if len(correct_packet_list) == 100:
+                    break
+        if len(correct_packet_list) != 100:
+            return 0
+        decoder = zfec.Decoder(100, 107)
+        decoded_packet = bytearray()
+        decoded_chunks = decoder.decode(list_of_correct_chunks, correct_packet_list)
+        for chunk in decoded_chunks:
+            decoded_packet += chunk
+        return decoded_packet[:packet_size]
+
     # Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
     # a fila de mensagens.
-    def interpret_packets(self, byte_array):
-        self.message += byte_array[self.HEADER_LENGTH:]
+    def interpret_packets(self, byte_array, packet_length):
+        packet_decoded = SerialInterface.recover_original_packet(bytearray[self.HEADER_LENGTH:], packet_length)
+        if packet_decoded == 0:
+            print "error"
+            return
+        self.message += packet_decoded
         self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
-        # print self.last_packet, self.current_packet
-        # print self.output_queue.qsize()
+        print self.last_packet, self.current_packet
+        print self.output_queue.qsize()
         if self.current_packet == self.last_packet:
             self.current_packet = 0
             self.message_queue.put(self.message)
