@@ -328,7 +328,7 @@ class SerialInterface(object):
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
     # a fila de mensagens.
     def interpret_packets(self, byte_array, packet_length):
-        packet_decoded = SerialInterface.recover_original_packet(bytearray[self.HEADER_LENGTH:], packet_length)
+        packet_decoded = SerialInterface.recover_original_packet(byte_array[self.HEADER_LENGTH:], packet_length)
         if packet_decoded == 0:
             print "error"
             return
