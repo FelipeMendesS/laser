@@ -50,6 +50,7 @@ class SerialInterface(object):
             self.reading.start()
             self.writing.start()
             self.concatenating.start()
+            self.t = 0
         except serial.SerialException:
             if self.serial_port.isOpen():
                 self.serial_port.close()
@@ -209,6 +210,7 @@ class SerialInterface(object):
     # I currently don't know how to reliably check how many bytes I have in the output buffer of the computer
     # at any given time, so I will use a simple calculation to decide how many bytes I send for each millisecond so
     # I never completely fill the output buffer. It's obviously not 100% efficient.
+    @profile
     def write_data(self):
         time.sleep(2)
         byte_rate = 4*self.baud_rate/10000
@@ -319,6 +321,8 @@ class SerialInterface(object):
                 correct_packet_list.append(i)
                 if len(correct_packet_list) == 100:
                     break
+            else:
+                print "found error"
         if len(correct_packet_list) != 100:
             return 0
         decoder = zfec.Decoder(100, 107)
@@ -336,6 +340,8 @@ class SerialInterface(object):
         if packet_decoded == 0:
             print "error"
             return
+        if len(self.message) == 0:
+            self.t = time.clock()
         self.message += packet_decoded
         self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
         print self.last_packet, self.current_packet
@@ -343,6 +349,7 @@ class SerialInterface(object):
         if self.current_packet == self.last_packet:
             self.current_packet = 0
             self.message_queue.put(self.message)
+            print time.clock() - self.t
             self.message = bytearray()
 
     def is_link_up(self):
