@@ -286,7 +286,7 @@ class SerialInterface(object):
                 packet_length = 0
                 found_packet = False
             if self.input_queue.qsize() < 100:
-                time.sleep(0.001)
+                time.sleep(0.05)
             # current_length = len(received_bytes)
 
     # Add option for different types of packets
