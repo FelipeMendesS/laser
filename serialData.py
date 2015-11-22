@@ -207,7 +207,7 @@ class SerialInterface(object):
     # I never completely fill the output buffer. It's obviously not 100% efficient.
     def write_data(self):
         time.sleep(2)
-        byte_rate = self.baud_rate/10000
+        byte_rate = 4*self.baud_rate/10000
         number_of_bytes_sent = byte_rate
         data_to_send = bytearray()
         self.serial_port.flushOutput()
@@ -239,7 +239,7 @@ class SerialInterface(object):
 
         while not self.stop_everything.is_set() or\
                 (self.stop_everything.is_set and (not self.output_queue.empty() or len(data_to_send) > 0)):
-            # time.sleep(0.001)
+            time.sleep(0.001)
             if not self.output_queue.empty() and len(data_to_send) < 1000:
                 data_to_send.extend(self.output_queue.get(block=False))
             if len(data_to_send) < byte_rate:
