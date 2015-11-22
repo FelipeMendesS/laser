@@ -201,7 +201,7 @@ def receive_file():
                 try:
                     zfile = zipfile.ZipFile(r_name + ".zip")
                     zfile.extract(file_name)
-                except zipfile.BadZipfile:
+                except zipfile.BadZipfile, IOError:
                     print "File arrived corrupted!"
                 zfile.close()
                 os.remove(r_name + ".zip")

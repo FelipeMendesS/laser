@@ -137,8 +137,12 @@ class SerialInterface(object):
     # Interface com o abraco termina
 
     def wait_for_data(self, minimum_buffer_size, sleep_time):
+        counter = 0
         while self.serial_port.inWaiting() < minimum_buffer_size and not self.stop_everything.is_set():
             time.sleep(sleep_time)
+            counter += 1
+            if counter >= 2 and self.serial_port.inWaiting() >= 1:
+                break
         return
 
     def read_data(self):
@@ -191,7 +195,7 @@ class SerialInterface(object):
         # self.input_queue.put(initial_data, False)
         # # read data from serial port continuously
         while not self.stop_everything.is_set():
-            self.wait_for_data(1, 0.001)
+            self.wait_for_data(100, 0.001)
             if self.stop_everything.is_set():
                 break
             self.input_queue.put(self.serial_port.read(self.serial_port.inWaiting()), False)
