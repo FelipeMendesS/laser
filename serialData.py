@@ -331,6 +331,7 @@ class SerialInterface(object):
     def concatenate_received_bytes(self):
         received_bytes = bytearray()
         found_packet = False
+        packet_type = ""
         # debug variables (delete later)
         packet_length = 0
         total_packet_length = 0
@@ -340,28 +341,37 @@ class SerialInterface(object):
                 received_bytes.extend(self.input_queue.get(block=False))
                 index = 0
             if not found_packet and index != -1:
-                index = self.find_beginning_of_packet(received_bytes)
+                index, packet_type = self.find_beginning_of_packet(received_bytes)
                 if index != -1:
                     found_packet = True
                     received_bytes = received_bytes[index:]
-            if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
-                packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                total_packet_length = SerialInterface.real_packet_length(packet_length)
-            elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
-                self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length)
-                received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
-                packet_length = 0
-                found_packet = False
-            if self.input_queue.qsize() < 100:
-                time.sleep(0.05)
-            # current_length = len(received_bytes)
+            if packet_type == "data"
+                if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
+                    packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
+                    total_packet_length = SerialInterface.real_packet_length(packet_length)
+                elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
+                    self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length)
+                    received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
+                    packet_length = 0
+                    found_packet = False
+                    # current_length = len(received_bytes)
+                if self.input_queue.qsize() < 100:
+                    time.sleep(0.05)
+            elif packet_type == "acknowledge"
+                
+            elif packet_type == "retransmission"      
 
     # Add option for different types of packets
     def find_beginning_of_packet(self, byte_array):
         for i in range(len(byte_array) - 3):
             a = struct.unpack('I', byte_array[i:i+4])[0]
             if a == self.DATA_PACKET_B:
-                return i
+                return (i, "data")
+            elif a == self.ACK_PACKET_B:
+                return (i, "acknowledge")
+            elif a == self.RETRANS_PACKET_B:
+                return (i, "retransmission")
+
         return -1
 
         #XINAROW!!!
