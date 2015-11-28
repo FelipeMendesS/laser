@@ -364,6 +364,8 @@ class SerialInterface(object):
                 return i
         return -1
 
+        #XINAROW!!!
+
     # If the packet is corrupted in an irreversible way this function
     # just returns 0. Otherwise it returns the original packet.
     @staticmethod
