@@ -15,6 +15,8 @@ import numpy as np
 # Retransmit request: \xff\xaa\x55\xff
 # Also, we are going to send acknowledgment packets for the first packet and the last packet only, so we know when the
 # the message started to be received and when it was received completely. Probably logic in the interpret packets.
+# Packet identifier:
+# Composed by three bytes, first byte the message ID, and two other bytes are the packet sequence in the message!
 
 
 class SerialInterface(object):
@@ -26,12 +28,14 @@ class SerialInterface(object):
     HEADER_LENGTH = 8
     FIRST_POINTING_BYTE = 0x55
     LAST_POINTING_BYTE = 0xaa
+    WINDOW_SIZE = 5
 
     def __init__(self, port, baud_rate):
         try:
-            # Change output queue to priority queue so the packets can be retransmitted as fast as possible.
             self.input_queue = Queue.Queue()
             self.output_queue = Queue.Queue()
+            self.retransmit_ack_queue = Queue.Queue()
+            self.transmit_window_queue = Queue.Queue()
             self.message_queue = Queue.Queue()
             # Contains message being concatenated
             self.message = bytearray()
@@ -51,6 +55,11 @@ class SerialInterface(object):
             self.writing.start()
             self.concatenating.start()
             self.t = 0
+            self.message_id = 0
+            self.window_slots_left = 5
+            self.data_to_send = bytearray()
+            self.in_window_packets_dict = {}
+            self.packet_situation_dict = {}
         except serial.SerialException:
             if self.serial_port.isOpen():
                 self.serial_port.close()
@@ -71,11 +80,14 @@ class SerialInterface(object):
         return '0'
 
     #       --HEADER--
-    #       \packet_begin(4 bytes)\packet_length(2 bytes)\last_packet(1 byte)\current_packet(1 byte)\
+    #       \packet_begin(4 bytes)\message_id(1 byte)\current_packet(2 bytes)\last_packet(2 bytes)\packet_length(2 bytes)\
     #       --/HEADER--
 
     def send_data(self, file_to_send):
         if not file_to_send == '':
+            self.message_id += 1
+            if self.message_id > 255:
+                self.message_id = 1
             message_length = len(file_to_send)
             last_packet = int((message_length - 1)/self.MAX_PACKET_LENGTH) + 1
             for current_packet in range(1, last_packet + 1):
@@ -86,8 +98,9 @@ class SerialInterface(object):
                     pointer_packet_end = pointer_packet_begin + message_length % self.MAX_PACKET_LENGTH
                 packet_length = pointer_packet_end - pointer_packet_begin
                 packet = bytearray(struct.pack('I', self.DATA_PACKET_B))
+                packet += bytearray(struct.pack('B', self.message_id))
+                packet += bytearray(struct.pack('HH', current_packet, last_packet))
                 packet += bytearray(struct.pack('H', packet_length))
-                packet += bytearray(struct.pack('BB', last_packet, current_packet))
                 packet += bytearray(SerialInterface.include_error_correction(file_to_send[pointer_packet_begin:pointer_packet_end]))
                 self.output_queue.put(packet, False)
 
@@ -136,6 +149,31 @@ class SerialInterface(object):
             return self.current_packet
 
     # Interface com o abraco termina
+
+    def transmission_manager(self):
+        while not self.is_it_pointed.is_set():
+            time.sleep(0.1)
+            continue
+        while not self.stop_everything.is_set():
+            if not self.retransmit_ack_queue.empty() and len(self.data_to_send) < 1000:
+                self.data_to_send.extend(self.retransmit_ack_queue.get(block=False))
+            elif not self.transmit_window_queue.empty() and len(self.data_to_send) < 1000:
+                data = self.transmit_window_queue.get(block=False)
+                if len(data) == 3:
+                # logic here that indicates that a packet was sent but is waiting for confirmation
+                # also, start timer fo rthis packet retransmission
+                # see : https://docs.python.org/2/library/threading.html#timer-objects
+                self.data_to_send.extend(self.transmit_window_queue.get(block=False))
+            while self.window_slots_left > 0 and not self.output_queue.empty():
+                packet = self.output_queue.get(block=False)
+                packet_identifier = packet[4:7]
+                self.transmit_window_queue.put(packet, block=False)
+                self.transmit_window_queue.put(packet_identifier, block=False)
+                # Added packet to dictionary
+                self.in_window_packets_dict[struct.unpack('I', packet_identifier + bytearray(1))] = packet
+                # When acknowledge is received, this is incremented (by the interpret packets)
+                self.window_slots_left -= 1
+
 
     def wait_for_data(self, minimum_buffer_size, sleep_time):
         counter = 0
@@ -211,10 +249,12 @@ class SerialInterface(object):
     # at any given time, so I will use a simple calculation to decide how many bytes I send for each millisecond so
     # I never completely fill the output buffer. It's obviously not 100% efficient.
     def write_data(self):
+        # We need to urgently change this structure with an almost empty write data for more efficient writing
+        # In this case the write data thread would be completely empty of any processing except writing data to
+        # the serial port!!! And we would need another thread to deal with the processing.
         time.sleep(2)
-        byte_rate = 4*self.baud_rate/10000
+        byte_rate = self.baud_rate/10000
         number_of_bytes_sent = byte_rate
-        data_to_send = bytearray()
         self.serial_port.flushOutput()
 
         while not self.is_it_pointed.is_set() and not self.stop_everything.is_set():
@@ -242,23 +282,45 @@ class SerialInterface(object):
         self.serial_port.write(bytearray(struct.pack('B', self.FIRST_POINTING_BYTE)))
         self.serial_port.write(bytearray(struct.pack('B', self.LAST_POINTING_BYTE)))
 
-        while not self.stop_everything.is_set() or\
-                (self.stop_everything.is_set and (not self.output_queue.empty() or len(data_to_send) > 0)):
-            time.sleep(0.001)
-            if not self.output_queue.empty() and len(data_to_send) < 1000:
-                data_to_send.extend(self.output_queue.get(block=False))
-            if len(data_to_send) < byte_rate:
-                number_of_bytes_sent = len(data_to_send)
+        sent = False
+        while not self.stop_everything.is_set() or (self.stop_everything.is_set() and len(self.data_to_send) > 0):
+            if len(self.data_to_send) < byte_rate:
+                number_of_bytes_sent = len(self.data_to_send)
             try:
-                if len(data_to_send) > 0:
-                    self.serial_port.write(data_to_send[:number_of_bytes_sent])
+                if self.serial_port.outWaiting() < 2 * byte_rate:
+                    self.serial_port.write(self.data_to_send[:number_of_bytes_sent])
+                sent = True
             except serial.SerialException:
                 if not self.serial_port.isOpen():
                     self.stop_serial()
                 else:
                     raise
-            data_to_send = data_to_send[number_of_bytes_sent:]
+            if sent:
+                self.data_to_send = self.data_to_send[number_of_bytes_sent:]
+                sent = False
             number_of_bytes_sent = byte_rate
+            time.sleep(0.0001)
+
+        # while not self.stop_everything.is_set() or\
+        #         (self.stop_everything.is_set and (not self.output_queue.empty() or len(self.data_to_send) > 0)):
+        #     time.sleep(0.001)
+        #     if not self.retransmit_ack_queue.empty() and len(self.data_to_send) < 1000:
+        #         self.data_to_send.extend(self.retransmit_ack_queue.get(block=False))
+        #     elif not self.transmit_window_queue.empty() and len(self.data_to_send) < 1000:
+        #         if
+        #         self.data_to_send.extend(self.transmit_window_queue.get(block=False))
+        #     if len(self.data_to_send) < byte_rate:
+        #         number_of_bytes_sent = len(self.data_to_send)
+        #     try:
+        #         if len(self.data_to_send) > 0:
+        #             self.serial_port.write(self.data_to_send[:number_of_bytes_sent])
+        #     except serial.SerialException:
+        #         if not self.serial_port.isOpen():
+        #             self.stop_serial()
+        #         else:
+        #             raise
+        #     data_to_send = self.data_to_send[number_of_bytes_sent:]
+        #     number_of_bytes_sent = byte_rate
 
     def stop_serial(self):
         if not self.stop_everything.is_set():
