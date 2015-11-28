@@ -345,21 +345,17 @@ class SerialInterface(object):
                 if index != -1:
                     found_packet = True
                     received_bytes = received_bytes[index:]
-            if packet_type == "data"
-                if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
-                    packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                    total_packet_length = SerialInterface.real_packet_length(packet_length)
-                elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
-                    self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length)
-                    received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
-                    packet_length = 0
-                    found_packet = False
-                    # current_length = len(received_bytes)
-                if self.input_queue.qsize() < 100:
-                    time.sleep(0.05)
-            elif packet_type == "acknowledge"
-                
-            elif packet_type == "retransmission"      
+            if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
+                packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
+                total_packet_length = SerialInterface.real_packet_length(packet_length)
+            elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
+                self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length, packet_type)
+                received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
+                packet_length = 0
+                found_packet = False
+            if self.input_queue.qsize() < 100:
+                time.sleep(0.05)
+            # current_length = len(received_bytes)
 
     # Add option for different types of packets
     def find_beginning_of_packet(self, byte_array):
@@ -371,11 +367,7 @@ class SerialInterface(object):
                 return (i, "acknowledge")
             elif a == self.RETRANS_PACKET_B:
                 return (i, "retransmission")
-
         return -1
-
-        #XINAROW!!!
-
     # If the packet is corrupted in an irreversible way this function
     # just returns 0. Otherwise it returns the original packet.
     @staticmethod
@@ -408,23 +400,27 @@ class SerialInterface(object):
     # Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
     # a fila de mensagens.
-    def interpret_packets(self, byte_array, packet_length):
-        packet_decoded = SerialInterface.recover_original_packet(byte_array[self.HEADER_LENGTH:], packet_length)
-        if packet_decoded == 0:
-            print "error"
-            return
-        if len(self.message) == 0:
-            self.t = time.clock()
-        self.message += packet_decoded
-        self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
-        print self.last_packet, self.current_packet
-        print self.output_queue.qsize()
-        if self.current_packet == self.last_packet:
-            self.current_packet = 0
-            self.message_queue.put(self.message)
-            print time.clock() - self.t
-            self.message = bytearray()
-
+    def interpret_packets(self, byte_array, packet_length, packet_type):
+        if packet_type == "data"
+            packet_decoded = SerialInterface.recover_original_packet(byte_array[self.HEADER_LENGTH:], packet_length)
+            if packet_decoded == 0:
+                print "error"
+                return
+            if len(self.message) == 0:
+                self.t = time.clock()
+            self.message += packet_decoded
+            self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
+            print self.last_packet, self.current_packet
+            print self.output_queue.qsize()
+            if self.current_packet == self.last_packet:
+                self.current_packet = 0
+                self.message_queue.put(self.message)
+                print time.clock() - self.t
+                self.message = bytearray()
+        elif packet_type == "acknowledge"
+            self.window_slots_left += 1
+        elif packet_type == "retransmission"
+            
     def is_link_up(self):
         return self.is_it_pointed.is_set()
 
