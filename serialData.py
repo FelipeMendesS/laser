@@ -210,7 +210,6 @@ class SerialInterface(object):
     # I currently don't know how to reliably check how many bytes I have in the output buffer of the computer
     # at any given time, so I will use a simple calculation to decide how many bytes I send for each millisecond so
     # I never completely fill the output buffer. It's obviously not 100% efficient.
-    @profile
     def write_data(self):
         time.sleep(2)
         byte_rate = 4*self.baud_rate/10000
