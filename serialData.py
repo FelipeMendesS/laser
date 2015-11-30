@@ -310,7 +310,8 @@ class SerialInterface(object):
         while not self.stop_everything.is_set() or (self.stop_everything.is_set() and len(self.data_to_send) > 0):
             if len(self.data_to_send) < byte_rate:
                 number_of_bytes_sent = len(self.data_to_send)
-                print number_of_bytes_sent
+                if number_of_bytes_sent > 0:
+                    print number_of_bytes_sent
             try:
                 if self.serial_port.outWaiting() < 2 * byte_rate:
                     self.serial_port.write(self.data_to_send[:number_of_bytes_sent])
