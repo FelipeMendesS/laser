@@ -118,6 +118,6 @@ print bytearray(b) == data
 while serial_interface1.window_slots_left < 5:
     time.sleep(0.001)
 
-time.sleep(50)
+time.sleep(10)
 serial_interface1.stop_serial()
 # serial_interface2.stop_serial()

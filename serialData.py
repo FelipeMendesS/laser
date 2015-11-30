@@ -203,11 +203,11 @@ class SerialInterface(object):
             time.sleep(sleep_time)
             counter += 1
             if counter % 1000 == 0:
-                print "Waiting Bytes"
-                print self.serial_port.inWaiting()
+                # print "Waiting Bytes"
+                # print self.serial_port.inWaiting()
             if counter >= 2 and self.serial_port.inWaiting() >= 1:
-                print "getting Bytes"
-                print self.serial_port.inWaiting()
+                # print "getting Bytes"
+                # print self.serial_port.inWaiting()
                 break
 
     def read_data(self):
@@ -313,8 +313,8 @@ class SerialInterface(object):
             if len(self.data_to_send) < byte_rate:
                 number_of_bytes_sent = len(self.data_to_send)
                 if number_of_bytes_sent > 0:
-                    print "bytes to send"
-                    print number_of_bytes_sent
+                    # print "bytes to send"
+                    # print number_of_bytes_sent
             try:
                 if self.serial_port.outWaiting() < 2 * byte_rate:
                     self.serial_port.write(self.data_to_send[:number_of_bytes_sent])
@@ -370,7 +370,6 @@ class SerialInterface(object):
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
                 received_bytes.extend(self.input_queue.get(block=False))
-                print len(received_bytes)
                 index = 0
             if not found_packet and index != -1:
                 index, packet_type = self.find_beginning_of_packet(received_bytes)
@@ -531,4 +530,6 @@ class SerialInterface(object):
         self.retransmit_ack_queue.put(packet)
         print "sending ack"
         return
+
+
 
