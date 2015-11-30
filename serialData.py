@@ -36,7 +36,7 @@ class SerialInterface(object):
     LAST_POINTING_BYTE = 0xaa
     WINDOW_SIZE = 5
     # Timer for retransmission
-    RETRANSMISSION_TIMER = 100
+    RETRANSMISSION_TIMER = 10000
     PACKET_SENT = 0
     PACKET_RESENT = 1
     PACKET_ACKNOWLEDGED = 2
@@ -389,6 +389,7 @@ class SerialInterface(object):
                     self.interpret_packets(received_bytes[4:self.ACK_RETRANS_HEADER_LENGTH], 3, packet_type, packet_identifier)
                     packet_type = ""
                     found_packet = False
+                    received_bytes = received_bytes[self.ACK_RETRANS_HEADER_LENGTH:]
             # if self.input_queue.qsize() < 100:
                 # time.sleep(0.05)
             # current_length = len(received_bytes)
