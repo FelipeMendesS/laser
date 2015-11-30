@@ -98,8 +98,6 @@ class SerialInterface(object):
     #       --HEADER--
     #       \packet_begin(4 bytes)\message_id(1 byte)\current_packet(2 bytes)\last_packet(2 bytes)\packet_length(2 bytes)\
     #       --/HEADER--
-
-
     def send_data(self, file_to_send):
         if not file_to_send == '':
             self.message_id += 1
@@ -156,13 +154,13 @@ class SerialInterface(object):
                 return (packet_length / 100 + 1) * 107 + 4 * 107
 
     # Interface com o abraco termina
-
     def check_retransmission_timer(self, packet_identifier):
         self.packet_timer_dict[packet_identifier] = (1, 0)
         packet = self.in_window_packets_dict[packet_identifier]
         byte_packet_identifier = packet[4:7]
         self.transmit_window_queue.put(packet, block=False)
         self.transmit_window_queue.put(byte_packet_identifier, block=False)
+        print "resending"
 
     def transmission_manager(self):
         while not self.is_it_pointed.is_set():
