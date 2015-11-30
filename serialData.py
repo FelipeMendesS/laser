@@ -25,7 +25,8 @@ class SerialInterface(object):
     ACK_PACKET_B = 0x00aa55ff
     RETRANS_PACKET_B = 0xffaa5500
     MAX_PACKET_LENGTH = 64000
-    HEADER_LENGTH = 8
+    HEADER_LENGTH = 11
+    ACK_RETRANS_HEADER_LENGTH = 7
     FIRST_POINTING_BYTE = 0x55
     LAST_POINTING_BYTE = 0xaa
     WINDOW_SIZE = 5
@@ -82,6 +83,10 @@ class SerialInterface(object):
     #       --HEADER--
     #       \packet_begin(4 bytes)\message_id(1 byte)\current_packet(2 bytes)\last_packet(2 bytes)\packet_length(2 bytes)\
     #       --/HEADER--
+
+    #       --ACK_RETRANS_HEADER--
+    #       \packet_begin(4 bytes)\packet_number(2 bytes)\message_id(1 byte)\
+    #       --/ACK_RETRANS_HEADER--
 
     def send_data(self, file_to_send):
         if not file_to_send == '':
@@ -333,7 +338,9 @@ class SerialInterface(object):
         found_packet = False
         packet_type = ""
         # debug variables (delete later)
+        packet_number = 0
         packet_length = 0
+        message_id = 0
         total_packet_length = 0
         index = 0
         while not self.stop_everything.is_set():
@@ -345,14 +352,23 @@ class SerialInterface(object):
                 if index != -1:
                     found_packet = True
                     received_bytes = received_bytes[index:]
-            if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
-                packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-4:self.HEADER_LENGTH-2])[0]
-                total_packet_length = SerialInterface.real_packet_length(packet_length)
-            elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
-                self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length, packet_type)
-                received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
-                packet_length = 0
-                found_packet = False
+            if packet_type == "data":
+                if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
+                    packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])[0]
+                    total_packet_length = SerialInterface.real_packet_length(packet_length)
+                elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
+                    self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length, packet_type, 0x0000, 0x00)
+                    received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
+                    packet_length = 0
+                    packet_type = ""
+                    found_packet = False
+            elif packet_type == "acknowledge" or packet_type == "retransmission":
+                if len(received_bytes) = self.ACK_RETRANS_HEADER_LENGTH and found_packet:
+                    message_id = struct.unpack('B', received_bytes[self.ACK_RETRANS_HEADER_LENGTH])[0]
+                    packet_number = struct.unpack('H', received_bytes[self.ACK_RETRANS_HEADER_LENGTH-3:self.ACK_RETRANS_HEADER_LENGTH-1])[0]
+                    self.interpret_packets(0x00, 0x00, packet_type, packet_number, message_id)
+                    packet_type = ""
+                    found_packet = False
             if self.input_queue.qsize() < 100:
                 time.sleep(0.05)
             # current_length = len(received_bytes)
@@ -400,7 +416,7 @@ class SerialInterface(object):
     # Funcao que checa o pacote, contra erros por exemplo, e se ele eh parte de uma mensagem maior, junta esse pacote.
     # Se detecta que pacote foi perdido, chama o request_retransmission. Quando a mensagem esta completa adiciona
     # a fila de mensagens.
-    def interpret_packets(self, byte_array, packet_length, packet_type):
+    def interpret_packets(self, byte_array, packet_length, packet_type, packet_number, message_id):
         if packet_type == "data"
             packet_decoded = SerialInterface.recover_original_packet(byte_array[self.HEADER_LENGTH:], packet_length)
             if packet_decoded == 0:
