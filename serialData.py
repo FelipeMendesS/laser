@@ -50,7 +50,6 @@ class SerialInterface(object):
             self.transmit_window_queue = Queue.Queue()
             self.message_queue = Queue.Queue()
             # Contains message being concatenated
-            self.message = bytearray()
             self.baud_rate = baud_rate
             self.serial_port = serial.Serial(port, self.baud_rate, timeout=1, writeTimeout=1)
             #  Event to stop all threads and close serial port safely.
@@ -61,11 +60,11 @@ class SerialInterface(object):
             self.reading = threading.Thread(target=self.read_data)
             self.writing = threading.Thread(target=self.write_data)
             self.concatenating = threading.Thread(target=self.concatenate_received_bytes)
-            self.current_packet = 0
-            self.last_packet = 0
+            self.manager = threading.Thread(target=self.transmission_manager)
             self.reading.start()
             self.writing.start()
             self.concatenating.start()
+            self.manager.start()
             self.t = 0
             self.message_id = 0
             self.window_slots_left = 5
@@ -74,6 +73,9 @@ class SerialInterface(object):
             self.in_window_packets_dict = {}
             # Data structure with associated situation for each packet.
             self.packet_timer_dict = {}
+            # dictionary with all messages received
+            self.message_dict = {}
+            self.received_packet_status = {}
         except serial.SerialException:
             if self.serial_port.isOpen():
                 self.serial_port.close()
@@ -97,9 +99,6 @@ class SerialInterface(object):
     #       \packet_begin(4 bytes)\message_id(1 byte)\current_packet(2 bytes)\last_packet(2 bytes)\packet_length(2 bytes)\
     #       --/HEADER--
 
-    #       --ACK_RETRANS_HEADER--
-    #       \packet_begin(4 bytes)\packet_number(2 bytes)\message_id(1 byte)\
-    #       --/ACK_RETRANS_HEADER--
 
     def send_data(self, file_to_send):
         if not file_to_send == '':
@@ -156,24 +155,14 @@ class SerialInterface(object):
             else:
                 return (packet_length / 100 + 1) * 107 + 4 * 107
 
-    def total_number_of_packets(self):
-        return self.last_packet
-
-    def current_processed_packet(self):
-        if self.current_packet == 0 and self.last_packet != 0:
-            return self.last_packet
-        else:
-            return self.current_packet
-
     # Interface com o abraco termina
 
     def check_retransmission_timer(self, packet_identifier):
-        self.packet_timer_dict[packet_identifier] = (1,0)
-        identifier = struct.unpack('I', packet_identifier + bytearray(1))[0]
-        packet = self.in_window_packets_dict[identifier]
-        packet_identifier = packet[4:7]
+        self.packet_timer_dict[packet_identifier] = (1, 0)
+        packet = self.in_window_packets_dict[packet_identifier]
+        byte_packet_identifier = packet[4:7]
         self.transmit_window_queue.put(packet, block=False)
-        self.transmit_window_queue.put(packet_identifier, block=False)
+        self.transmit_window_queue.put(byte_packet_identifier, block=False)
 
     def transmission_manager(self):
         while not self.is_it_pointed.is_set():
@@ -380,9 +369,10 @@ class SerialInterface(object):
             if packet_type == "data":
                 if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                     packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])[0]
+                    packet_identifier = struct.unpack('I', received_bytes[4:7] + bytearray(1))[0]
                     total_packet_length = SerialInterface.real_packet_length(packet_length)
                 elif len(received_bytes) >= (self.HEADER_LENGTH + total_packet_length) and found_packet:
-                    self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length, packet_type, 0x0000, 0x00)
+                    self.interpret_packets(received_bytes[:total_packet_length + self.HEADER_LENGTH], packet_length, packet_type, packet_identifier)
                     received_bytes = received_bytes[total_packet_length + self.HEADER_LENGTH:]
                     packet_length = 0
                     packet_type = ""
@@ -446,17 +436,35 @@ class SerialInterface(object):
             if packet_decoded == 0:
                 self.request_retransmission(packet_identifier)
                 return
-            if len(self.message) == 0:
-                self.t = time.clock()
-            self.message += packet_decoded
-            self.last_packet, self.current_packet = struct.unpack('BB', byte_array[self.HEADER_LENGTH-2:self.HEADER_LENGTH])
-            print self.last_packet, self.current_packet
+            current_packet = struct.unpack('H', byte_array[5:7])[0]
+            message_id = struct.unpack('B', byte_array[4:5])[0]
+            last_packet = struct.unpack('H', byte_array[7:9])[0]
+            self.send_acknowledgement(packet_identifier)
+            if current_packet == 1:
+                if last_packet != 1:
+                    self.message_dict[message_id] = byte_array[self.HEADER_LENGTH:] + bytearray((last_packet - 1) * self.MAX_PACKET_LENGTH)
+                    self.received_packet_status[message_id] = [True] + [False] * (last_packet - 1)
+                else:
+                    self.message_queue.put(byte_array[self.HEADER_LENGTH:])
+            else:
+                self.received_packet_status[message_id][current_packet - 1] = True
+                if current_packet == last_packet:
+                    self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH:] = byte_array[self.HEADER_LENGTH:]
+                else:
+                    self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH: current_packet * self.MAX_PACKET_LENGTH] = byte_array[self.HEADER_LENGTH:]
+                if not self.received_packet_status[message_id][current_packet - 1]:
+                    retransmit_packet = current_packet - 1
+                    packet_identifier = struct.unpack('I', bytearray(struct.pack('B', message_id)) + bytearray(struct.pack('H', current_packet)) + bytearray(1))
+                    self.request_retransmission(packet_identifier)
+                    while not self.received_packet_status[message_id][retransmit_packet - 1]:
+                        retransmit_packet = current_packet - 1
+                        packet_identifier = struct.unpack('I', bytearray(struct.pack('B', message_id)) + bytearray(struct.pack('H', current_packet)) + bytearray(1))
+                        self.request_retransmission(packet_identifier)
+            print last_packet, current_packet
             print self.input_queue.qsize()
-            if self.current_packet == self.last_packet:
-                self.current_packet = 0
-                self.message_queue.put(self.message)
-                print time.clock() - self.t
-                self.message = bytearray()
+            if self.received_packet_status[message_id].all():
+                self.message_queue.put(self.message_dict.pop(message_id), block=False)
+                self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
             self.packet_timer_dict[packet_identifier][1].cancel()
             self.packet_timer_dict.pop(packet_identifier)
@@ -468,7 +476,11 @@ class SerialInterface(object):
             self.packet_timer_dict[packet_identifier][1].cancel()
             self.retransmit_ack_queue.put(self.in_window_packets_dict[packet_identifier], block=False)
             self.retransmit_ack_queue.put(bytearray(struct.pack('I', packet_identifier))[:-1], block=False)
-            
+
+                            #       --HEADER--
+#       \packet_begin(4 bytes)\message_id(1 byte)\current_packet(2 bytes)\last_packet(2 bytes)\packet_length(2 bytes)\
+#       --/HEADER--
+
     def is_link_up(self):
         return self.is_it_pointed.is_set()
 
@@ -491,3 +503,4 @@ class SerialInterface(object):
         packet = packet[:-1]
         self.retransmit_ack_queue.put(packet)
         return
+
