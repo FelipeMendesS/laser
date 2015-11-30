@@ -36,7 +36,7 @@ class SerialInterface(object):
     LAST_POINTING_BYTE = 0xaa
     WINDOW_SIZE = 5
     # Timer for retransmission
-    RETRANSMISSION_TIMER = 10
+    RETRANSMISSION_TIMER = 100
     PACKET_SENT = 0
     PACKET_RESENT = 1
     PACKET_ACKNOWLEDGED = 2
@@ -397,7 +397,7 @@ class SerialInterface(object):
                 return i, "acknowledge"
             elif a == self.RETRANS_PACKET_B:
                 return i, "retransmission"
-        return -1
+        return -1, "nada"
     # If the packet is corrupted in an irreversible way this function
     # just returns 0. Otherwise it returns the original packet.
     @staticmethod
