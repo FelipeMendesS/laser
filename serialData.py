@@ -195,6 +195,7 @@ class SerialInterface(object):
                 self.in_window_packets_dict[struct.unpack('I', packet_identifier + bytearray(1))[0]] = packet
                 # When acknowledge is received, this is incremented (by the interpret packets)
                 self.window_slots_left -= 1
+            time.sleep(0.001)
 
     def wait_for_data(self, minimum_buffer_size, sleep_time):
         counter = 0
@@ -369,6 +370,8 @@ class SerialInterface(object):
                 if index != -1:
                     found_packet = True
                     received_bytes = received_bytes[index:]
+                if len(received_bytes) >= 3:
+                    received_bytes = received_bytes[-3:]
             if packet_type == "data":
                 if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
                     packet_length = struct.unpack('H', received_bytes[self.HEADER_LENGTH-2:self.HEADER_LENGTH])[0]
@@ -386,8 +389,8 @@ class SerialInterface(object):
                     self.interpret_packets(received_bytes[4:self.ACK_RETRANS_HEADER_LENGTH], 3, packet_type, packet_identifier)
                     packet_type = ""
                     found_packet = False
-            if self.input_queue.qsize() < 100:
-                time.sleep(0.05)
+            # if self.input_queue.qsize() < 100:
+                # time.sleep(0.05)
             # current_length = len(received_bytes)
 
     # Add option for different types of packets
@@ -435,6 +438,7 @@ class SerialInterface(object):
     # a fila de mensagens.
     def interpret_packets(self, byte_array, packet_length, packet_type, packet_identifier):
         if packet_type == "data":
+            print "data"
             packet_decoded = SerialInterface.recover_original_packet(byte_array[self.HEADER_LENGTH:], packet_length)
             if packet_decoded == 0:
                 self.request_retransmission(packet_identifier)
@@ -472,11 +476,13 @@ class SerialInterface(object):
                 self.message_queue.put(self.message_dict.pop(message_id), block=False)
                 self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
+            print "ack"
             self.packet_timer_dict[packet_identifier][1].cancel()
             self.packet_timer_dict.pop(packet_identifier)
             self.in_window_packets_dict.pop(packet_identifier)
             self.window_slots_left += 1
         elif packet_type == "retransmission":
+            print "ret"
             if self.packet_timer_dict[packet_identifier][0] == 1:
                 return
             self.packet_timer_dict[packet_identifier][1].cancel()
