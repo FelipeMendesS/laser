@@ -176,7 +176,7 @@ class SerialInterface(object):
                 if len(data) == 3:
                     packet_identifier = struct.unpack('I', data + bytearray(1))[0]
                     timer = threading.Timer(self.RETRANSMISSION_TIMER, self.check_retransmission_timer,
-                                            args=(struct.unpack('I', data + bytearray(1))[0]))
+                                            args=(struct.unpack('I', data + bytearray(1))[0],))
                     if self.packet_timer_dict.has_key(packet_identifier) and self.packet_timer_dict[packet_identifier][0] == 0:
                         self.packet_timer_dict[packet_identifier][1].cancel()
                     self.packet_timer_dict[packet_identifier] = (0, timer)
@@ -370,7 +370,7 @@ class SerialInterface(object):
                 if index != -1:
                     found_packet = True
                     received_bytes = received_bytes[index:]
-                if len(received_bytes) >= 3:
+                if len(received_bytes) >= 3 and not found_packet:
                     received_bytes = received_bytes[-3:]
             if packet_type == "data":
                 if len(received_bytes) >= self.HEADER_LENGTH and packet_length == 0 and found_packet:
