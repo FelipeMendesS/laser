@@ -95,6 +95,8 @@ for i, j in zip(a, data):
         counter += 1
 # print counter
 
+print b
+print data
 
 print bytearray(b) == data
 
