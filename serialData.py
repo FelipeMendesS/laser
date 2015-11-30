@@ -312,7 +312,7 @@ class SerialInterface(object):
         while not self.stop_everything.is_set() or (self.stop_everything.is_set() and len(self.data_to_send) > 0):
             if len(self.data_to_send) < byte_rate:
                 number_of_bytes_sent = len(self.data_to_send)
-                if len(self.data_to_send) > 0:
+                # if len(self.data_to_send) > 0:
                     # print "sending"
                     # print self.data_to_send
                 # if number_of_bytes_sent > 0:
@@ -485,6 +485,7 @@ class SerialInterface(object):
             print last_packet, current_packet
             print self.input_queue.qsize()
             if all(self.received_packet_status[message_id]):
+                print "getting message"
                 self.message_queue.put(self.message_dict.pop(message_id), block=False)
                 self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
