@@ -448,6 +448,9 @@ class SerialInterface(object):
                     self.received_packet_status[message_id] = [True] + [False] * (last_packet - 1)
                 else:
                     self.message_queue.put(byte_array[self.HEADER_LENGTH:])
+                    print last_packet, current_packet
+                    print self.input_queue.qsize()
+                    return
             else:
                 self.received_packet_status[message_id][current_packet - 1] = True
                 if current_packet == last_packet:
