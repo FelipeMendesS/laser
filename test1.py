@@ -16,6 +16,7 @@ except KeyboardInterrupt:
     serial_interface1.stop_serial()
     exit()
 
+print "pointed"
 data = bytearray(os.urandom(12500))
 
 print len(data)

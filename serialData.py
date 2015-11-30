@@ -177,13 +177,14 @@ class SerialInterface(object):
                     packet_identifier = struct.unpack('I', data + bytearray(1))[0]
                     timer = threading.Timer(self.RETRANSMISSION_TIMER, self.check_retransmission_timer,
                                             args=(struct.unpack('I', data + bytearray(1))[0]))
-                    if self.packet_timer_dict[packet_identifier][0] == 1:
+                    if self.packet_timer_dict.has_key(packet_identifier) and self.packet_timer_dict[packet_identifier][0] == 1:
                         self.packet_timer_dict[packet_identifier] = (0, timer)
                         timer.start()
                 # logic here that indicates that a packet was sent but is waiting for confirmation
-                # also, start timer fo rthis packet retransmission
+                # also, start timer fo this packet retransmission
                 # see : https://docs.python.org/2/library/threading.html#timer-objects
-                self.data_to_send.extend(self.transmit_window_queue.get(block=False))
+                else:
+                    self.data_to_send.extend(data)
             while self.window_slots_left > 0 and not self.output_queue.empty():
                 packet = self.output_queue.get(block=False)
                 packet_identifier = packet[4:7]
@@ -360,6 +361,7 @@ class SerialInterface(object):
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
                 received_bytes.extend(self.input_queue.get(block=False))
+                print len(received_bytes)
                 index = 0
             if not found_packet and index != -1:
                 index, packet_type = self.find_beginning_of_packet(received_bytes)

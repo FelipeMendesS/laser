@@ -25,6 +25,7 @@ except KeyboardInterrupt:
     serial_interface1.stop_serial()
     exit()
 
+print "pointed"
 data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*50000
 
 # print len(data)
