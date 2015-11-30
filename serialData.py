@@ -177,9 +177,10 @@ class SerialInterface(object):
                     packet_identifier = struct.unpack('I', data + bytearray(1))[0]
                     timer = threading.Timer(self.RETRANSMISSION_TIMER, self.check_retransmission_timer,
                                             args=(struct.unpack('I', data + bytearray(1))[0]))
-                    if self.packet_timer_dict.has_key(packet_identifier) and self.packet_timer_dict[packet_identifier][0] == 1:
-                        self.packet_timer_dict[packet_identifier] = (0, timer)
-                        timer.start()
+                    if self.packet_timer_dict.has_key(packet_identifier) and self.packet_timer_dict[packet_identifier][0] == 0:
+                        self.packet_timer_dict[packet_identifier][1].cancel()
+                    self.packet_timer_dict[packet_identifier] = (0, timer)
+                    timer.start()
                 # logic here that indicates that a packet was sent but is waiting for confirmation
                 # also, start timer fo this packet retransmission
                 # see : https://docs.python.org/2/library/threading.html#timer-objects
