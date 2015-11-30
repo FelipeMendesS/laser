@@ -313,8 +313,8 @@ class SerialInterface(object):
             if len(self.data_to_send) < byte_rate:
                 number_of_bytes_sent = len(self.data_to_send)
                 if len(self.data_to_send) > 0:
-                    print "sending"
-                    print self.data_to_send
+                    # print "sending"
+                    # print self.data_to_send
                 # if number_of_bytes_sent > 0:
                 #     # print "bytes to send"
                 #     # print number_of_bytes_sent
@@ -484,7 +484,7 @@ class SerialInterface(object):
                         self.request_retransmission(packet_identifier)
             print last_packet, current_packet
             print self.input_queue.qsize()
-            if all(self.received_packet_status[message_id])
+            if all(self.received_packet_status[message_id]):
                 self.message_queue.put(self.message_dict.pop(message_id), block=False)
                 self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
@@ -533,7 +533,7 @@ class SerialInterface(object):
         packet = bytearray(struct.pack('I', self.ACK_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
         packet = packet[:-1]
         self.retransmit_ack_queue.put(packet)
-        # print "sending ack"
+        print "sending ack"
         # print packet
         return
 
