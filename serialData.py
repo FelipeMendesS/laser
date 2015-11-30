@@ -160,7 +160,7 @@ class SerialInterface(object):
         byte_packet_identifier = packet[4:7]
         self.transmit_window_queue.put(packet, block=False)
         self.transmit_window_queue.put(byte_packet_identifier, block=False)
-        print "resending"
+        # print "resending"
 
     def transmission_manager(self):
         while not self.is_it_pointed.is_set():
@@ -169,7 +169,7 @@ class SerialInterface(object):
         while not self.stop_everything.is_set():
             if not self.retransmit_ack_queue.empty() and len(self.data_to_send) < 1000:
                 self.data_to_send.extend(self.retransmit_ack_queue.get(block=False))
-                print "sending ack or ret"
+                # print "sending ack or ret"
             elif not self.transmit_window_queue.empty() and len(self.data_to_send) < 1000:
                 data = self.transmit_window_queue.get(block=False)
                 if len(data) == 3:
@@ -185,7 +185,7 @@ class SerialInterface(object):
                 # see : https://docs.python.org/2/library/threading.html#timer-objects
                 else:
                     self.data_to_send.extend(data)
-                    print "sending normal data"
+                    # print "sending normal data"
             while self.window_slots_left > 0 and not self.output_queue.empty():
                 packet = self.output_queue.get(block=False)
                 packet_identifier = packet[4:7]
@@ -373,8 +373,8 @@ class SerialInterface(object):
         while not self.stop_everything.is_set():
             if not self.input_queue.empty():
                 received_bytes.extend(self.input_queue.get(block=False))
-                print"received"
-                print received_bytes
+                # print"received"
+                # print received_bytes
                 index = 0
             if not found_packet and index != -1:
                 index, packet_type = self.find_beginning_of_packet(received_bytes)
@@ -533,7 +533,8 @@ class SerialInterface(object):
         packet = bytearray(struct.pack('I', self.ACK_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
         packet = packet[:-1]
         self.retransmit_ack_queue.put(packet)
-        print "sending ack"
+        # print "sending ack"
+        # print packet
         return
 
 
