@@ -26,7 +26,7 @@ except KeyboardInterrupt:
     exit()
 
 print "pointed"
-data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100
+data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*1
 
 # print len(data)
 # print data
@@ -115,7 +115,7 @@ serial_interface1.send_data(b)
 # b = serial_interface2.get_message()
 # print bytearray(a) == test_array
 # print bytearray(b) == test_array
-
+time.sleep(2)
 while serial_interface1.window_slots_left < 5:
     time.sleep(0.001)
 
