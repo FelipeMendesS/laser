@@ -237,7 +237,6 @@ class SerialInterface(object):
                 index = -1
             elif not self.is_it_pointed.is_set():
                 pointing_data = bytearray()
-
         self.input_queue.put(pointing_data)
         # packet_detected = False
         # while self.serial_port.inWaiting() < 1 and not self.stop_everything.is_set():
@@ -331,7 +330,7 @@ class SerialInterface(object):
                 self.data_to_send = self.data_to_send[number_of_bytes_sent:]
                 sent = False
             number_of_bytes_sent = byte_rate
-            time.sleep(0.0001)
+            time.sleep(0.001)
 
         # while not self.stop_everything.is_set() or\
         #         (self.stop_everything.is_set and (not self.output_queue.empty() or len(self.data_to_send) > 0)):
