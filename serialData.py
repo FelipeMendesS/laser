@@ -202,9 +202,11 @@ class SerialInterface(object):
         while self.serial_port.inWaiting() < minimum_buffer_size and not self.stop_everything.is_set():
             time.sleep(sleep_time)
             counter += 1
+            if counter % 100 == 0:
+                print "Waiting Bytes"
+                print self.serial_port.inWaiting()
             if counter >= 2 and self.serial_port.inWaiting() >= 1:
                 break
-        return
 
     def read_data(self):
         time.sleep(2)
@@ -308,6 +310,7 @@ class SerialInterface(object):
         while not self.stop_everything.is_set() or (self.stop_everything.is_set() and len(self.data_to_send) > 0):
             if len(self.data_to_send) < byte_rate:
                 number_of_bytes_sent = len(self.data_to_send)
+                print number_of_bytes_sent
             try:
                 if self.serial_port.outWaiting() < 2 * byte_rate:
                     self.serial_port.write(self.data_to_send[:number_of_bytes_sent])
