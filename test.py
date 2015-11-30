@@ -33,7 +33,6 @@ data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100
 serial_interface1.send_data(data)
 # serial_interface2.send_data(data)
 
-serial_interface1.send_data(data)
 # serial_interface2.send_data(data)
 #
 # serial_interface1.send_data(test_array)
@@ -57,7 +56,6 @@ a = serial_interface1.get_message()
 # print a
 
 serial_interface1.send_data(a)
-serial_interface1.send_data(a)
 
 
 while serial_interface1.message_queue_is_empty():
@@ -67,18 +65,18 @@ b = serial_interface1.get_message()
 
 
 
-counter = 0
-for i, j in zip(a, b):
-    if i != j:
-        counter += 1
-# print counter
+# counter = 0
+# for i, j in zip(a, b):
+#     if i != j:
+#         counter += 1
+# # print counter
 
-if counter == 0:
-    print "xinarow"
-    while serial_interface1.message_queue_is_empty():
-        time.sleep(0.1)
-    b = serial_interface1.get_message()
-    # print b
+# if counter == 0:
+#     print "xinarow"
+#     while serial_interface1.message_queue_is_empty():
+#         time.sleep(0.1)
+#     b = serial_interface1.get_message()
+#     # print b
 
 # b = serial_interface2.get_message()
 # print b

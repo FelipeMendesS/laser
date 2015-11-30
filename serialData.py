@@ -36,7 +36,7 @@ class SerialInterface(object):
     LAST_POINTING_BYTE = 0xaa
     WINDOW_SIZE = 5
     # Timer for retransmission
-    RETRANSMISSION_TIMER = 10000
+    RETRANSMISSION_TIMER = 5
     PACKET_SENT = 0
     PACKET_RESENT = 1
     PACKET_ACKNOWLEDGED = 2
