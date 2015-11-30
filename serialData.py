@@ -477,10 +477,17 @@ class SerialInterface(object):
                 self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
             print "ack"
-            self.packet_timer_dict[packet_identifier][1].cancel()
-            self.packet_timer_dict.pop(packet_identifier)
-            self.in_window_packets_dict.pop(packet_identifier)
+            if self.packet_timer_dict.has_key(packet_identifier):
+                self.packet_timer_dict[packet_identifier][1].cancel()
+                self.packet_timer_dict.pop(packet_identifier)
+            else:
+                print "Timer doesnt exist"
+            if self.in_window_packets_dict.has_key(packet_identifier):
+                self.in_window_packets_dict.pop(packet_identifier)
+            else:
+                print "No packet in window dict"
             self.window_slots_left += 1
+            print self.window_slots_left
         elif packet_type == "retransmission":
             print "ret"
             if self.packet_timer_dict[packet_identifier][0] == 1:
