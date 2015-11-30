@@ -525,7 +525,7 @@ class SerialInterface(object):
     def send_acknowledgement(self, packet_identifier):
         packet = bytearray(struct.pack('I', self.ACK_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
         packet = packet[:-1]
-        self.retransmit_ack_queue.put(packet)
+        self.retransmit_ack_queue.put(bytearray(100) + packet + bytearray(100))
         print "sending ack"
         return
 

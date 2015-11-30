@@ -97,7 +97,8 @@ print b
 print data
 
 print bytearray(b) == data
-
+serial_interface1.send_data(b)
+serial_interface1.send_data(b)
 # try:
 #     while serial_interface1.message_queue_is_empty() or serial_interface2.message_queue_is_empty():
 #         # print serial_interface1.message_queue_is_empty()
