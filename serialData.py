@@ -450,19 +450,19 @@ class SerialInterface(object):
             self.send_acknowledgement(packet_identifier)
             if current_packet == 1:
                 if last_packet != 1:
-                    self.message_dict[message_id] = byte_array[self.HEADER_LENGTH:] + bytearray((last_packet - 1) * self.MAX_PACKET_LENGTH)
+                    self.message_dict[message_id] = packet_decoded + bytearray((last_packet - 1) * self.MAX_PACKET_LENGTH)
                     self.received_packet_status[message_id] = [True] + [False] * (last_packet - 1)
                 else:
-                    self.message_queue.put(byte_array[self.HEADER_LENGTH:])
+                    self.message_queue.put(packet_decoded)
                     print last_packet, current_packet
                     print self.input_queue.qsize()
                     return
             else:
                 self.received_packet_status[message_id][current_packet - 1] = True
                 if current_packet == last_packet:
-                    self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH:] = byte_array[self.HEADER_LENGTH:]
+                    self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH:] = packet_decoded
                 else:
-                    self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH: current_packet * self.MAX_PACKET_LENGTH] = byte_array[self.HEADER_LENGTH:]
+                    self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH: current_packet * self.MAX_PACKET_LENGTH] = packet_decoded
                 if not self.received_packet_status[message_id][current_packet - 1]:
                     retransmit_packet = current_packet - 1
                     packet_identifier = struct.unpack('I', bytearray(struct.pack('B', message_id)) + bytearray(struct.pack('H', current_packet)) + bytearray(1))

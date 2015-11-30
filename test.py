@@ -117,5 +117,6 @@ print bytearray(b) == data
 # print bytearray(a) == test_array
 # print bytearray(b) == test_array
 
+time.sleep(5)
 serial_interface1.stop_serial()
 # serial_interface2.stop_serial()
