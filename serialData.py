@@ -36,7 +36,7 @@ class SerialInterface(object):
     LAST_POINTING_BYTE = 0xaa
     WINDOW_SIZE = 5
     # Timer for retransmission
-    RETRANSMISSION_TIMER = 2
+    RETRANSMISSION_TIMER = 1000
     PACKET_SENT = 0
     PACKET_RESENT = 1
     PACKET_ACKNOWLEDGED = 2
@@ -484,7 +484,7 @@ class SerialInterface(object):
                         self.request_retransmission(packet_identifier)
             print last_packet, current_packet
             print self.input_queue.qsize()
-            if self.received_packet_status[message_id].all():
+            if all(self.received_packet_status[message_id])
                 self.message_queue.put(self.message_dict.pop(message_id), block=False)
                 self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
