@@ -170,7 +170,6 @@ class SerialInterface(object):
             if not self.retransmit_ack_queue.empty() and len(self.data_to_send) < 1000:
                 self.data_to_send.extend(self.retransmit_ack_queue.get(block=False))
                 print "sending ack or ret"
-                print self.data_to_send
             elif not self.transmit_window_queue.empty() and len(self.data_to_send) < 1000:
                 data = self.transmit_window_queue.get(block=False)
                 if len(data) == 3:
@@ -187,7 +186,6 @@ class SerialInterface(object):
                 else:
                     self.data_to_send.extend(data)
                     print "sending normal data"
-                    print self.data_to_send
             while self.window_slots_left > 0 and not self.output_queue.empty():
                 packet = self.output_queue.get(block=False)
                 packet_identifier = packet[4:7]
@@ -314,6 +312,9 @@ class SerialInterface(object):
         while not self.stop_everything.is_set() or (self.stop_everything.is_set() and len(self.data_to_send) > 0):
             if len(self.data_to_send) < byte_rate:
                 number_of_bytes_sent = len(self.data_to_send)
+                if len(self.data_to_send) > 0:
+                    print "sending"
+                    print self.data_to_send
                 # if number_of_bytes_sent > 0:
                 #     # print "bytes to send"
                 #     # print number_of_bytes_sent
