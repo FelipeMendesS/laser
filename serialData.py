@@ -17,6 +17,11 @@ import numpy as np
 # the message started to be received and when it was received completely. Probably logic in the interpret packets.
 # Packet identifier:
 # Composed by three bytes, first byte the message ID, and two other bytes are the packet sequence in the message!
+#       --HEADER--
+#       \packet_begin(4 bytes)\message_id(1 byte)\current_packet(2 bytes)\last_packet(2 bytes)\packet_length(2 bytes)\
+#       --/HEADER--
+
+
 
 
 class SerialInterface(object):
@@ -25,13 +30,19 @@ class SerialInterface(object):
     ACK_PACKET_B = 0x00aa55ff
     RETRANS_PACKET_B = 0xffaa5500
     MAX_PACKET_LENGTH = 64000
-    HEADER_LENGTH = 8
+    HEADER_LENGTH = 11
     FIRST_POINTING_BYTE = 0x55
     LAST_POINTING_BYTE = 0xaa
     WINDOW_SIZE = 5
+    # Timer for retransmission
+    RETRANSMISSION_TIMER = 10
+    PACKET_SENT = 0
+    PACKET_RESENT = 1
+    PACKET_ACKNOWLEDGED = 2
 
     def __init__(self, port, baud_rate):
         try:
+            # Queues for
             self.input_queue = Queue.Queue()
             self.output_queue = Queue.Queue()
             self.retransmit_ack_queue = Queue.Queue()
@@ -58,8 +69,12 @@ class SerialInterface(object):
             self.message_id = 0
             self.window_slots_left = 5
             self.data_to_send = bytearray()
+            # Data structure with all the packets that were sent and didn't receive acknowledgement yet
             self.in_window_packets_dict = {}
+            # Data structure with associated situation for each packet.
             self.packet_situation_dict = {}
+            # List with all the retransmission timers being used
+            self.retransmission_timers = 5*[(1, 0)]
         except serial.SerialException:
             if self.serial_port.isOpen():
                 self.serial_port.close()
@@ -108,7 +123,6 @@ class SerialInterface(object):
     def include_error_correction(packet):
         number_of_chunks = 100
         original_packet = packet[:]
-        packet_list = []
         if len(original_packet) >= 10000:
             packet_list = SerialInterface.split_packet(original_packet, number_of_chunks)
             packet_encoder = zfec.Encoder(number_of_chunks, 107)
@@ -150,7 +164,21 @@ class SerialInterface(object):
 
     # Interface com o abraco termina
 
+    def check_retransmission_timer(self, packet_identifier, index):
+        self.retransmission_timers[index][0] = 1
+        identifier = struct.unpack('I', packet_identifier + bytearray(1))[0]
+        if self.packet_situation_dict[identifier] != self.PACKET_ACKNOWLEDGED:
+            packet = self.in_window_packets_dict[identifier]
+            packet_identifier = packet[4:7]
+            self.transmit_window_queue.put(packet, block=False)
+            self.transmit_window_queue.put(packet_identifier, block=False)
+            self.packet_situation_dict[identifier] = self.PACKET_RESENT
+        else:
+            self.packet_situation_dict.pop(identifier)
+            self.in_window_packets_dict.pop(identifier)
+
     def transmission_manager(self):
+        index = 0
         while not self.is_it_pointed.is_set():
             time.sleep(0.1)
             continue
@@ -160,6 +188,15 @@ class SerialInterface(object):
             elif not self.transmit_window_queue.empty() and len(self.data_to_send) < 1000:
                 data = self.transmit_window_queue.get(block=False)
                 if len(data) == 3:
+                    self.packet_situation_dict[struct.unpack('I', data + bytearray(1))[0]] = self.PACKET_SENT
+                    timer = threading.Timer(self.RETRANSMISSION_TIMER, self.check_retransmission_timer,
+                                            args=(struct.unpack('I', data + bytearray(1))[0], index))
+                    if self.retransmission_timers[index][0] == 1:
+                        self.retransmission_timers[index] = (0, timer)
+                        timer.start()
+                        index += 1
+                        if index == 5:
+                            index = 0
                 # logic here that indicates that a packet was sent but is waiting for confirmation
                 # also, start timer fo rthis packet retransmission
                 # see : https://docs.python.org/2/library/threading.html#timer-objects
@@ -170,10 +207,9 @@ class SerialInterface(object):
                 self.transmit_window_queue.put(packet, block=False)
                 self.transmit_window_queue.put(packet_identifier, block=False)
                 # Added packet to dictionary
-                self.in_window_packets_dict[struct.unpack('I', packet_identifier + bytearray(1))] = packet
+                self.in_window_packets_dict[struct.unpack('I', packet_identifier + bytearray(1))[0]] = packet
                 # When acknowledge is received, this is incremented (by the interpret packets)
                 self.window_slots_left -= 1
-
 
     def wait_for_data(self, minimum_buffer_size, sleep_time):
         counter = 0

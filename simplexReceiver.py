@@ -19,7 +19,12 @@ baud_rate = 1000000
 
 serial_interface = serialData.SerialInterface(port, baud_rate)
 
-kb = kbhit.KBHit()
+# try:
+#     while not serial_interface.is_link_up():
+#         time.sleep(0.1)
+# except KeyboardInterrupt:
+#     serial_interface.stop_serial()
+#     exit()
 
 try:
     while not serial_interface.is_link_up():
@@ -62,3 +67,4 @@ try:
 except KeyboardInterrupt:
     serial_interface.stop_serial()
     exit()
+
