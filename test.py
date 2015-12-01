@@ -116,8 +116,12 @@ print bytearray(b) == data
 # print bytearray(a) == test_array
 # print bytearray(b) == test_array
 time.sleep(2)
-while serial_interface1.window_slots_left < 5:
-    time.sleep(0.001)
+try:
+    while serial_interface1.window_slots_left < 5:
+        time.sleep(0.001)
+except KeyboardInterrupt:
+    serial_interface1.stop_serial()
+    exit()
 
 time.sleep(10)
 print serial_interface1.window_slots_left
