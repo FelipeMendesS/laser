@@ -155,12 +155,14 @@ class SerialInterface(object):
 
     # Interface com o abraco termina
     def check_retransmission_timer(self, packet_identifier):
-        self.packet_timer_dict[packet_identifier] = (1, 0)
-        packet = self.in_window_packets_dict[packet_identifier]
-        byte_packet_identifier = packet[4:7]
-        self.transmit_window_queue.put(packet, block=False)
-        self.transmit_window_queue.put(byte_packet_identifier, block=False)
-        print "resending"
+        if self.packet_timer_dict.has_key(packet_identifier):
+            self.packet_timer_dict[packet_identifier] = (1, 0)
+        if self.in_window_packets_dict.has_key(packet_identifier):
+            packet = self.in_window_packets_dict[packet_identifier]
+            byte_packet_identifier = packet[4:7]
+            self.transmit_window_queue.put(packet, block=False)
+            self.transmit_window_queue.put(byte_packet_identifier, block=False)
+            print "resending"
 
     def transmission_manager(self):
         while not self.is_it_pointed.is_set():
