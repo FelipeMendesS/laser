@@ -208,7 +208,7 @@ class SerialInterface(object):
                 self.in_window_packets_dict[struct.unpack('I', packet_identifier + bytearray(1))[0]] = packet
                 # When acknowledge is received, this is incremented (by the interpret packets)
                 self.window_slots_left -= 1
-            time.sleep(0.01)
+            time.sleep(0.001)
 
     def wait_for_data(self, minimum_buffer_size, sleep_time):
         counter = 0
