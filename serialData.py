@@ -533,6 +533,7 @@ class SerialInterface(object):
                 current_packet = struct.unpack('H', byte_array[1:])[0]
                 self.send_packet_status[message_id][current_packet - 1] = True
                 if all(self.send_packet_status[message_id]):
+                    print "ack"
                     self.send_packet_status.pop(message_id)
             # print packet_identifier
             # print self.window_slots_lefts
