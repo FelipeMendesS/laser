@@ -542,6 +542,7 @@ class SerialInterface(object):
         packet = bytearray(struct.pack('I', self.RETRANS_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
         packet = packet[:-1]
         self.retransmit_ack_queue.put(packet)
+        print "ask for retransmission"
 
     def send_acknowledgement(self, packet_identifier):
         packet = bytearray(struct.pack('I', self.ACK_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
