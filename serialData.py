@@ -434,7 +434,7 @@ class SerialInterface(object):
     # just returns 0. Otherwise it returns the original packet.
     @staticmethod
     def recover_original_packet(packet, packet_size):
-        if packet_size < 10000:
+        if packet_size < 1000:
             if struct.unpack('I', packet[-4:])[0] != np.frombuffer(packet[:-4], 'uint8').sum():
                 return 0
             return packet[:-4]
