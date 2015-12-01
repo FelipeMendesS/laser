@@ -525,6 +525,9 @@ class SerialInterface(object):
             print self.window_slots_left
         elif packet_type == "retransmission":
             print "ret"
+            if not self.packet_timer_dict.has_key(packet_identifier):
+                print packet_identifier
+                return
             if self.packet_timer_dict[packet_identifier][0] == 1:
                 return
             self.packet_timer_dict[packet_identifier][1].cancel()
