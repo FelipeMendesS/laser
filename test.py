@@ -26,7 +26,7 @@ except KeyboardInterrupt:
     exit()
 
 print "pointed"
-data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100000
+data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*1000
 
 # print len(data)
 # print data
