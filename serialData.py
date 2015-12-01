@@ -195,7 +195,7 @@ class SerialInterface(object):
                 self.in_window_packets_dict[struct.unpack('I', packet_identifier + bytearray(1))[0]] = packet
                 # When acknowledge is received, this is incremented (by the interpret packets)
                 self.window_slots_left -= 1
-            time.sleep(0.001)
+            time.sleep(0.01)
 
     def wait_for_data(self, minimum_buffer_size, sleep_time):
         counter = 0
@@ -330,7 +330,7 @@ class SerialInterface(object):
                 self.data_to_send = self.data_to_send[number_of_bytes_sent:]
                 sent = False
             number_of_bytes_sent = byte_rate
-            time.sleep(0.005)
+            time.sleep(0.01)
 
         # while not self.stop_everything.is_set() or\
         #         (self.stop_everything.is_set and (not self.output_queue.empty() or len(self.data_to_send) > 0)):
