@@ -472,16 +472,21 @@ class SerialInterface(object):
             last_packet = struct.unpack('H', byte_array[7:9])[0]
             self.send_acknowledgement(packet_identifier)
             # TODO: If I actually lose the first packet but receive the second, what can I do about it?
-            if current_packet == 1:
+            if not self.received_packet_status.has_key(message_id):
                 if last_packet != 1:
-                    self.message_dict[message_id] = packet_decoded + bytearray((last_packet - 1) * self.MAX_PACKET_LENGTH)
-                    self.received_packet_status[message_id] = [True] + [False] * (last_packet - 1)
+                    self.message_dict[message_id] = bytearray((last_packet) * self.MAX_PACKET_LENGTH)
+                    self.received_packet_status[message_id] = [False] * last_packet
+                    if current_packet == last_packet:
+                        self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH:] = packet_decoded
+                    else:
+                        self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH: current_packet * self.MAX_PACKET_LENGTH] = packet_decoded
+                    self.received_packet_status[message_id][current_packet - 1] = True
                 else:
                     self.message_queue.put(packet_decoded)
                     print last_packet, current_packet
                     print self.input_queue.qsize()
                     return
-            elif self.received_packet_status.has_key(message_id):
+            else:
                 self.received_packet_status[message_id][current_packet - 1] = True
                 if current_packet == last_packet:
                     self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH:] = packet_decoded
@@ -508,11 +513,15 @@ class SerialInterface(object):
                 self.packet_timer_dict.pop(packet_identifier)
             else:
                 print "Timer doesnt exist"
+                print packet_identifier
+                return
             if self.in_window_packets_dict.has_key(packet_identifier):
                 self.in_window_packets_dict.pop(packet_identifier)
             else:
                 print "No packet in window dict"
+                return
             self.window_slots_left += 1
+            print packet_identifier
             print self.window_slots_left
         elif packet_type == "retransmission":
             print "ret"

@@ -57,9 +57,12 @@ a = serial_interface1.get_message()
 
 serial_interface1.send_data(a)
 
-
-while serial_interface1.message_queue_is_empty():
-    time.sleep(0.1)
+try:
+    while serial_interface1.message_queue_is_empty():
+        time.sleep(0.1)
+except KeyboardInterrupt:
+    serial_interface1.stop_serial()
+    exit()
 
 b = serial_interface1.get_message()
 
