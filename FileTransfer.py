@@ -148,13 +148,13 @@ def send_file():
                         msg_arrived_flag.clear()
                         number_of_packets = len(serial_interface.send_packet_status[message_id])
                         for i in tqdm(range(number_of_packets)):
-                            if not serial_interface.send_packet_status.has_key(message_id):
+                            if not serial_interface.send_packet_status.has_key(message_id) :
                                 continue
                             counter = 0
                             for j in range(number_of_packets):
                                 if serial_interface.send_packet_status[message_id][j]:
                                     counter += 1
-                            while serial_interface.send_packet_status.has_key(message_id) and i+1 > counter:
+                            while serial_interface.send_packet_status.has_key(message_id) and i+1 > counter and serial_interface.window_slots_left < 5:
                                 time.sleep(0.01)
                                 counter = 0
                                 for j in range(number_of_packets):
