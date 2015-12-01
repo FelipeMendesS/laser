@@ -123,7 +123,7 @@ except KeyboardInterrupt:
     serial_interface1.stop_serial()
     exit()
 
-time.sleep(10)
+time.sleep(50)
 print serial_interface1.window_slots_left
 serial_interface1.stop_serial()
 # serial_interface2.stop_serial()
