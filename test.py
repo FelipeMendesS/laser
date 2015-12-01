@@ -26,7 +26,7 @@ except KeyboardInterrupt:
     exit()
 
 print "pointed"
-data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*1000
+data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100000
 
 # print len(data)
 # print data
@@ -93,8 +93,8 @@ for i, j in zip(a, data):
         counter += 1
 # print counter
 
-print b
-print data
+# print b
+# print data
 
 print bytearray(b) == data
 
