@@ -9,6 +9,7 @@ from struct import *
 import kbhit
 from os import name
 from glob import glob
+from tqdm import tqdm
 
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 # Mudar isso para ser mais generico (Apos teste funcionando)
@@ -143,9 +144,24 @@ def send_file():
                         os.remove(name + ".zip")
                         data_byte = bytearray(data)
                         print len(data_byte)
-                        serial_interface.send_data(msg_start_byte + data_byte)
+                        message_id = serial_interface.send_data(msg_start_byte + data_byte)
                         msg_arrived_flag.clear()
-                        # adicionar algum feedback aqui.
+                        number_of_packets = len(serial_interface.send_packet_status[message_id])
+                        for i in tqdm(range(number_of_packets)):
+                            if not serial_interface.send_packet_status.has_key(message_id):
+                                continue
+                            counter = 0
+                            for j in range(number_of_packets):
+                                if serial_interface.send_packet_status[message_id][j]:
+                                    counter += 1
+                            while serial_interface.send_packet_status.has_key(message_id) and i+1 > counter:
+                                time.sleep(0.01)
+                                counter = 0
+                                for j in range(number_of_packets):
+                                    if not serial_interface.send_packet_status.has_key(message_id):
+                                        break
+                                    if serial_interface.send_packet_status[message_id][j]:
+                                        counter += 1
                         print "Arquivo enviado com sucesso!"
                     else:
                         print "Falha ao enviar o arquivo"
@@ -183,6 +199,36 @@ def receive_file():
                 if receive_ans == 's' or receive_ans == 'S':
                     msg_arrived_flag.set()
                     serial_interface.send_data(send_ok)
+                number_of_packets = N/serial_interface.MAX_PACKET_LENGTH
+                print number_of_packets
+                message_id = 0
+                while True:
+                    for message_id_i in serial_interface.received_packet_status.keys():
+                        print message_id_i
+                        print len(serial_interface.received_packet_status[message_id_i])
+                        if len(serial_interface.received_packet_status[message_id_i]) >= number_of_packets:
+                            message_id = message_id_i
+                            number_of_packets = len(serial_interface.received_packet_status[message_id])
+                            break
+                    if message_id != 0:
+                        break
+                    time.sleep(0.1)
+                for i in tqdm(range(number_of_packets)):
+                    if not serial_interface.received_packet_status.has_key(message_id):
+                        continue
+                    counter = 0
+                    for j in range(number_of_packets):
+                        if serial_interface.received_packet_status[message_id][j]:
+                            counter += 1
+                    while serial_interface.received_packet_status.has_key(message_id) and i+1 > counter:
+                        time.sleep(0.01)
+                        counter = 0
+                        for j in range(number_of_packets):
+                            if not serial_interface.received_packet_status.has_key(message_id):
+                                break
+                            if serial_interface.received_packet_status[message_id][j]:
+                                counter += 1
+
             elif msg[0] == msg_start_byte[0]:
                 received = str(msg[1:])
                 print len(received)

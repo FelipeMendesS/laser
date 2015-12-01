@@ -78,6 +78,7 @@ class SerialInterface(object):
             # dictionary with all messages received
             self.message_dict = {}
             self.received_packet_status = {}
+            self.send_packet_status = {}
         except serial.SerialException:
             if self.serial_port.isOpen():
                 self.serial_port.close()
@@ -120,6 +121,8 @@ class SerialInterface(object):
                 packet += bytearray(struct.pack('H', packet_length))
                 packet += bytearray(SerialInterface.include_error_correction(file_to_send[pointer_packet_begin:pointer_packet_end]))
                 self.output_queue.put(packet, False)
+            self.send_packet_status[self.message_id] = last_packet * [False]
+            return self.message_id
 
     @staticmethod
     def include_error_correction(packet):
@@ -164,7 +167,7 @@ class SerialInterface(object):
             byte_packet_identifier = packet[4:7]
             self.transmit_window_queue.put(packet, block=False)
             self.transmit_window_queue.put(byte_packet_identifier, block=False)
-            print "resending"
+            # print "resending"
 
     def transmission_manager(self):
         while not self.is_it_pointed.is_set():
@@ -450,8 +453,8 @@ class SerialInterface(object):
                 correct_packet_list.append(i)
                 if len(correct_packet_list) == 100:
                     break
-            else:
-                print "found error"
+            # else:
+                # print "found error"
         if len(correct_packet_list) != 100:
             return 0
         decoder = zfec.Decoder(100, 107)
@@ -466,7 +469,7 @@ class SerialInterface(object):
     # a fila de mensagens.
     def interpret_packets(self, byte_array, packet_length, packet_type, packet_identifier):
         if packet_type == "data":
-            print "data"
+            # print "data"
             packet_decoded = SerialInterface.recover_original_packet(byte_array[self.HEADER_LENGTH:], packet_length)
             if packet_decoded == 0:
                 self.request_retransmission(packet_identifier)
@@ -475,7 +478,6 @@ class SerialInterface(object):
             message_id = struct.unpack('B', byte_array[4:5])[0]
             last_packet = struct.unpack('H', byte_array[7:9])[0]
             self.send_acknowledgement(packet_identifier)
-            # TODO: If I actually lose the first packet but receive the second, what can I do about it?
             if not self.received_packet_status.has_key(message_id):
                 if last_packet != 1:
                     self.message_dict[message_id] = bytearray((last_packet) * self.MAX_PACKET_LENGTH)
@@ -487,8 +489,8 @@ class SerialInterface(object):
                     self.received_packet_status[message_id][current_packet - 1] = True
                 else:
                     self.message_queue.put(packet_decoded)
-                    print last_packet, current_packet
-                    print self.input_queue.qsize()
+                    # print last_packet, current_packet
+                    # print self.input_queue.qsize()
                     return
             else:
                 self.received_packet_status[message_id][current_packet - 1] = True
@@ -504,34 +506,39 @@ class SerialInterface(object):
                         retransmit_packet = current_packet - 1
                         packet_identifier = struct.unpack('I', bytearray(struct.pack('B', message_id)) + bytearray(struct.pack('H', current_packet)) + bytearray(1))
                         self.request_retransmission(packet_identifier)
-            print last_packet, current_packet
-            print self.input_queue.qsize()
+            # print last_packet, current_packet
+            # print self.input_queue.qsize()
             if self.received_packet_status.has_key(message_id) and all(self.received_packet_status[message_id]):
-                print "getting message"
+                # print "getting message"
                 self.message_queue.put(self.message_dict.pop(message_id), block=False)
                 self.received_packet_status.pop(message_id)
         elif packet_type == "acknowledge":
-            print "ack"
+            # print "ack"
             if self.packet_timer_dict.has_key(packet_identifier):
                 if self.packet_timer_dict[packet_identifier] == 0:
                     self.packet_timer_dict[packet_identifier][1].cancel()
                 self.packet_timer_dict.pop(packet_identifier)
             else:
-                print "Timer doesnt exist"
-                print packet_identifier
+                # print "Timer doesnt exist"
+                # print packet_identifier
                 return
             if self.in_window_packets_dict.has_key(packet_identifier):
                 self.in_window_packets_dict.pop(packet_identifier)
             else:
-                print "No packet in window dict"
+                # print "No packet in window dict"
                 return
             self.window_slots_left += 1
-            print packet_identifier
-            print self.window_slots_left
+            message_id = struct.unpack('B', byte_array[0])[0]
+            current_packet = struct.unpack('H', byte_array[1:])[0]
+            self.received_packet_status[message_id][current_packet - 1] = True
+            if all(self.received_packet_status[message_id]):
+                self.received_packet_status.pop(message_id)
+            # print packet_identifier
+            # print self.window_slots_left
         elif packet_type == "retransmission":
-            print "ret"
+            # print "ret"
             if not self.packet_timer_dict.has_key(packet_identifier):
-                print packet_identifier
+                # print packet_identifier
                 return
             if self.packet_timer_dict[packet_identifier][0] == 1:
                 return
@@ -559,15 +566,14 @@ class SerialInterface(object):
         packet = bytearray(struct.pack('I', self.RETRANS_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
         packet = packet[:-1]
         self.retransmit_ack_queue.put(packet)
-        print "ask for retransmission"
+        # print "ask for retransmission"
 
     def send_acknowledgement(self, packet_identifier):
         packet = bytearray(struct.pack('I', self.ACK_PACKET_B)) + bytearray(struct.pack('I', packet_identifier))
         packet = packet[:-1]
         self.retransmit_ack_queue.put(packet)
-        print "sending ack"
+        # print "sending ack"
         # print packet
         return
-
 
 
