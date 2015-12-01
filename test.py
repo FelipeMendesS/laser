@@ -28,7 +28,7 @@ except KeyboardInterrupt:
 print "pointed"
 
 t = time.clock()
-data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*100000
+data = bytearray("Felipe") + bytearray(struct.pack('B', 48))*500000
 
 # print len(data)
 # print data
