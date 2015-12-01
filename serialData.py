@@ -160,7 +160,7 @@ class SerialInterface(object):
         byte_packet_identifier = packet[4:7]
         self.transmit_window_queue.put(packet, block=False)
         self.transmit_window_queue.put(byte_packet_identifier, block=False)
-        # print "resending"
+        print "resending"
 
     def transmission_manager(self):
         while not self.is_it_pointed.is_set():
@@ -168,7 +168,20 @@ class SerialInterface(object):
             continue
         while not self.stop_everything.is_set():
             if not self.retransmit_ack_queue.empty() and len(self.data_to_send) < 1000:
-                self.data_to_send.extend(self.retransmit_ack_queue.get(block=False))
+                data = self.retransmit_ack_queue.get(block=False)
+                if len(data) == 3:
+                    packet_identifier = struct.unpack('I', data + bytearray(1))[0]
+                    timer = threading.Timer(self.RETRANSMISSION_TIMER, self.check_retransmission_timer,
+                                            args=(struct.unpack('I', data + bytearray(1))[0],))
+                    if self.packet_timer_dict.has_key(packet_identifier) and self.packet_timer_dict[packet_identifier][0] == 0:
+                        self.packet_timer_dict[packet_identifier][1].cancel()
+                    self.packet_timer_dict[packet_identifier] = (0, timer)
+                    timer.start()
+                # logic here that indicates that a packet was sent but is waiting for confirmation
+                # also, start timer fo this packet retransmission
+                # see : https://docs.python.org/2/library/threading.html#timer-objects
+                else:
+                    self.data_to_send.extend(data)
                 # print "sending ack or ret"
             elif not self.transmit_window_queue.empty() and len(self.data_to_send) < 1000:
                 data = self.transmit_window_queue.get(block=False)
@@ -458,6 +471,7 @@ class SerialInterface(object):
             message_id = struct.unpack('B', byte_array[4:5])[0]
             last_packet = struct.unpack('H', byte_array[7:9])[0]
             self.send_acknowledgement(packet_identifier)
+            # TODO: If I actually lose the first packet but receive the second, what can I do about it?
             if current_packet == 1:
                 if last_packet != 1:
                     self.message_dict[message_id] = packet_decoded + bytearray((last_packet - 1) * self.MAX_PACKET_LENGTH)
@@ -467,7 +481,7 @@ class SerialInterface(object):
                     print last_packet, current_packet
                     print self.input_queue.qsize()
                     return
-            else:
+            elif self.received_packet_status.has_key(message_id):
                 self.received_packet_status[message_id][current_packet - 1] = True
                 if current_packet == last_packet:
                     self.message_dict[message_id][(current_packet - 1) * self.MAX_PACKET_LENGTH:] = packet_decoded
@@ -483,7 +497,7 @@ class SerialInterface(object):
                         self.request_retransmission(packet_identifier)
             print last_packet, current_packet
             print self.input_queue.qsize()
-            if all(self.received_packet_status[message_id]):
+            if self.received_packet_status.has_key(message_id) and all(self.received_packet_status[message_id]):
                 print "getting message"
                 self.message_queue.put(self.message_dict.pop(message_id), block=False)
                 self.received_packet_status.pop(message_id)

@@ -119,7 +119,7 @@ time.sleep(2)
 try:
     while serial_interface1.window_slots_left < 5:
         time.sleep(0.001)
-    time.sleep(50)
+    time.sleep(10)
 except KeyboardInterrupt:
     serial_interface1.stop_serial()
     exit()
