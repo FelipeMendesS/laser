@@ -529,12 +529,13 @@ class SerialInterface(object):
                 return
             self.window_slots_left += 1
             message_id = struct.unpack('B', byte_array[:1])[0]
-            current_packet = struct.unpack('H', byte_array[1:])[0]
-            self.received_packet_status[message_id][current_packet - 1] = True
-            if all(self.received_packet_status[message_id]):
-                self.received_packet_status.pop(message_id)
+            if self.send_packet_status.has_key(message_id):
+                current_packet = struct.unpack('H', byte_array[1:])[0]
+                self.send_packet_status[message_id][current_packet - 1] = True
+                if all(self.send_packet_status[message_id]):
+                    self.send_packet_status.pop(message_id)
             # print packet_identifier
-            # print self.window_slots_left
+            # print self.window_slots_lefts
         elif packet_type == "retransmission":
             # print "ret"
             if not self.packet_timer_dict.has_key(packet_identifier):
