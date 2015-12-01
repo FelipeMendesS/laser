@@ -509,7 +509,8 @@ class SerialInterface(object):
         elif packet_type == "acknowledge":
             print "ack"
             if self.packet_timer_dict.has_key(packet_identifier):
-                self.packet_timer_dict[packet_identifier][1].cancel()
+                if self.packet_timer_dict[packet_identifier] == 0:
+                    self.packet_timer_dict[packet_identifier][1].cancel()
                 self.packet_timer_dict.pop(packet_identifier)
             else:
                 print "Timer doesnt exist"
