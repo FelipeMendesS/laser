@@ -528,7 +528,7 @@ class SerialInterface(object):
                 # print "No packet in window dict"
                 return
             self.window_slots_left += 1
-            message_id = struct.unpack('B', byte_array[0])[0]
+            message_id = struct.unpack('B', byte_array[:1])[0]
             current_packet = struct.unpack('H', byte_array[1:])[0]
             self.received_packet_status[message_id][current_packet - 1] = True
             if all(self.received_packet_status[message_id]):
