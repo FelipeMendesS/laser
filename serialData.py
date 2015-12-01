@@ -291,7 +291,7 @@ class SerialInterface(object):
         # In this case the write data thread would be completely empty of any processing except writing data to
         # the serial port!!! And we would need another thread to deal with the processing.
         time.sleep(2)
-        byte_rate = self.baud_rate/10000
+        byte_rate = 5*self.baud_rate/10000
         number_of_bytes_sent = byte_rate
         self.serial_port.flushOutput()
 
