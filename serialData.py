@@ -29,7 +29,7 @@ class SerialInterface(object):
     DATA_PACKET_B = 0x0055aaff
     ACK_PACKET_B = 0x00aa55ff
     RETRANS_PACKET_B = 0xffaa5500
-    MAX_PACKET_LENGTH = 64000
+    MAX_PACKET_LENGTH = 5000
     HEADER_LENGTH = 11
     ACK_RETRANS_HEADER_LENGTH = 7
     FIRST_POINTING_BYTE = 0x55
@@ -123,7 +123,7 @@ class SerialInterface(object):
     def include_error_correction(packet):
         number_of_chunks = 100
         original_packet = packet[:]
-        if len(original_packet) >= 10000:
+        if len(original_packet) >= 1000:
             packet_list = SerialInterface.split_packet(original_packet, number_of_chunks)
             packet_encoder = zfec.Encoder(number_of_chunks, 107)
             packet_list = packet_encoder.encode(packet_list)
