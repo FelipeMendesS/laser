@@ -7,6 +7,18 @@ import struct
 import zfec
 import numpy as np
 
+"""
+Class for the interface between serial port and application. In practice it contains the link and transport layers.
+The SerialInterface Class is based on 4 threads:
+Writing: Used to write in the serial port.
+Reading: Used to read from the serial port.
+Concatenating: Used to get the chunks of bytes read from the serial port, concatenate and interpret them.
+Manager: Used to manage the queues that are used to send data to the serial port.
+"""
+
+
+
+
 # It seems to be reasonable for us to create differents initial bytes for the packets depending if we are requesting a
 # retransmission or acknowledging the data being received or asking for a retransmission. Just as an example I'll start
 # with some specific bit sequences:

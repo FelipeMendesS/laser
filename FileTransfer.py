@@ -11,6 +11,12 @@ from os import name
 from glob import glob
 from tqdm import tqdm
 
+
+"""
+Class for the simple application used in the demo of the FSO communication.
+It's based on two threads. One to receive data from the other side and the other to send data.
+"""
+
 # colocar aqui o diretório do arquivo usando barra dupla (\\)
 # Mudar isso para ser mais generico (Apos teste funcionando)
 # path = 'C:\\Users\\Usuário\\Desktop\\ITA\\ELE\\4º Semestre\\Projeto EEA-47\\Leitura_Arquivos'
